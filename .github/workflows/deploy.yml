@@ -69,16 +69,21 @@ jobs:
       - name: Deploy on EC2
         uses: appleboy/ssh-action@v1.2.0
         env:
+          # GitHub Secrets → 런너 환경변수
           JASYPT_ENCRYPTOR_PASSWORD: ${{ secrets.JASYPT_ENCRYPTOR_PASSWORD }}
+          # (선택) 항상 prod 프로필/서울 TZ 고정하고 싶다면 여기도 추가 가능
+          SPRING_PROFILES_ACTIVE: prod
+          TZ: Asia/Seoul
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           command_timeout: 30m
-          # 아래 envs에 나열한 변수명이 원격 쉘에도 전달됩니다.
-          envs: JASYPT_ENCRYPTOR_PASSWORD
+          # ★ 이 줄이 '원격'으로 넘기는 키: 여기 나열 안 하면 원격 쉘에서 못 씀
+          envs: JASYPT_ENCRYPTOR_PASSWORD,SPRING_PROFILES_ACTIVE,TZ
           script: |
-            set -euo pipefail
+            set -Eeuo pipefail
+
             APP_HOME="/home/$USER/app/backend"
             UPLOAD_DIR="$APP_HOME/_upload"
             STAGE_DIR="/tmp/backend_stage_$(date +%s)"
@@ -90,7 +95,7 @@ jobs:
             fi
             [ -f "$UPLOAD_DIR/app.tar.gz" ] || { echo "tar not found"; exit 1; }
 
-            # Docker/Compose 없으면 설치(필요 시 1회)
+            # Docker/Compose 설치 (필요 시 1회)
             if ! command -v docker >/dev/null 2>&1; then
               sudo apt-get update -y
               sudo apt-get install -y ca-certificates curl gnupg lsb-release
@@ -100,13 +105,12 @@ jobs:
               sudo apt-get update -y
               sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
               sudo usermod -aG docker $USER || true
-              sudo systemctl start docker
-              sudo systemctl enable docker
+              sudo systemctl enable --now docker
             fi
             if docker compose version >/dev/null 2>&1; then
               DOCKER_COMPOSE="docker compose"
             else
-              command -v docker-compose >/dev/null 2>&1 || sudo apt-get install -y docker-compose
+              command -v docker-compose >/div/null 2>&1 || sudo apt-get install -y docker-compose
               DOCKER_COMPOSE="docker-compose"
             fi
 
@@ -116,34 +120,41 @@ jobs:
             ls -la "$STAGE_DIR"
             [ -f "$STAGE_DIR/Dockerfile" ] && [ -f "$STAGE_DIR/docker-compose.yml" ] && [ -f "$STAGE_DIR/app.jar" ] || { echo "bundle content missing"; exit 1; }
 
-            # rsync로 원자적 반영
             command -v rsync >/dev/null 2>&1 || sudo apt-get install -y rsync
+            mkdir -p "$APP_HOME"
             rsync -a --delete "$STAGE_DIR/." "$APP_HOME/"
             rm -rf "$STAGE_DIR" "$UPLOAD_DIR/app.tar.gz"
 
             cd "$APP_HOME"
 
-            # ====== 🔐 Secrets 주입: .env 생성 ======
-            # docker compose는 기본적으로 현재 폴더의 .env를 읽지만,
-            # 명시적으로 --env-file도 사용해 안전하게 주입합니다.
-            printf "JASYPT_ENCRYPTOR_PASSWORD=%s\n" "$JASYPT_ENCRYPTOR_PASSWORD" > "$APP_HOME/.env"
+            # ====== 🔐 Secrets 주입: .env 생성 (base64 경유) ======
+            # ★ 특수문자/개행 깨짐 방지
+            if [ -z "${JASYPT_ENCRYPTOR_PASSWORD:-}" ]; then
+              echo "[FATAL] JASYPT_ENCRYPTOR_PASSWORD is empty from GitHub Secrets or not passed via 'envs:'"; exit 1
+            fi
+            SECRET_B64="$(printf '%s' "$JASYPT_ENCRYPTOR_PASSWORD" | base64 -w0 2>/dev/null || printf '%s' "$JASYPT_ENCRYPTOR_PASSWORD" | base64)"
+            {
+              echo "JASYPT_ENCRYPTOR_PASSWORD=$(printf '%s' "$SECRET_B64" | base64 -d)"
+              # (선택) 함께 고정하고 싶으면 여기도 기록
+              echo "SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-prod}"
+              echo "TZ=${TZ:-Asia/Seoul}"
+            } > "$APP_HOME/.env"
             chmod 600 "$APP_HOME/.env"
 
-            # 80번 포트를 사용하는 모든 프로세스 확인 및 정리
+            # ★ 값 마스킹하여 존재만 확인
+            awk -F= '{print $1"="(length($2)?"***":"<empty>")}' "$APP_HOME/.env"
+
+            # 포트 80 사용 프로세스 정리
             echo "Checking processes using port 80..."
             sudo netstat -tlnp | grep :80 || echo "No processes found on port 80"
-
-            # 기존 Docker 컨테이너들 정리 (포트 충돌 방지)
             echo "Stopping all Docker containers using port 80..."
             docker ps -q --filter "publish=80" | xargs -r docker stop || true
             docker ps -aq --filter "publish=80" | xargs -r docker rm || true
-
-            # Apache/Nginx 등이 실행 중이면 중지
             sudo systemctl stop apache2 2>/dev/null || true
             sudo systemctl stop nginx 2>/dev/null || true
             sudo systemctl stop httpd 2>/dev/null || true
 
-            # Docker 권한 확인 및 컨테이너 실행
+            # Compose up
             if ! docker ps >/dev/null 2>&1; then
               echo "Docker permission issue, using sudo"
               sudo $DOCKER_COMPOSE --env-file "$APP_HOME/.env" down || true
@@ -160,7 +171,7 @@ jobs:
             echo "Waiting for application to start..."
             sleep 15
             for i in {1..5}; do
-              if curl -f http://localhost:80/actuator/health 2>/dev/null; then
+              if curl -fsS http://localhost:80/actuator/health >/dev/null 2>&1; then
                 echo "Health check passed!"
                 break
               else
@@ -170,3 +181,4 @@ jobs:
             done
 
             echo "[OK] Deployed. Try: curl http://<EC2_PUBLIC_IP>/actuator/health"
+      
