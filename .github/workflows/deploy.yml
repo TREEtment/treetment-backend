@@ -22,6 +22,7 @@ jobs:
 
       - name: Build bootJar
         run: |
+          chmod +x ./gradlew
           ./gradlew --no-daemon clean bootJar
           # 가장 첫 번째 JAR을 app.jar로 표준화
           JAR=$(ls build/libs/*.jar | head -n 1)
@@ -64,13 +65,18 @@ jobs:
           debug: true
 
       # /tmp에 풀어 검증 → rsync로 반영 → Docker Compose up
+      # GitHub Secret을 원격에 안전하게 전달(.env 생성)하기 위해 envs 사용
       - name: Deploy on EC2
         uses: appleboy/ssh-action@v1.2.0
+        env:
+          JASYPT_ENCRYPTOR_PASSWORD: ${{ secrets.JASYPT_ENCRYPTOR_PASSWORD }}
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           command_timeout: 30m
+          # 아래 envs에 나열한 변수명이 원격 쉘에도 전달됩니다.
+          envs: JASYPT_ENCRYPTOR_PASSWORD
           script: |
             set -euo pipefail
             APP_HOME="/home/$USER/app/backend"
@@ -94,7 +100,6 @@ jobs:
               sudo apt-get update -y
               sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
               sudo usermod -aG docker $USER || true
-              # Docker 서비스 시작 및 활성화
               sudo systemctl start docker
               sudo systemctl enable docker
             fi
@@ -116,36 +121,41 @@ jobs:
             rsync -a --delete "$STAGE_DIR/." "$APP_HOME/"
             rm -rf "$STAGE_DIR" "$UPLOAD_DIR/app.tar.gz"
 
-            # 빠른 빌드(이미 JAR 포함이므로 아주 가벼움)
             cd "$APP_HOME"
-            
+
+            # ====== 🔐 Secrets 주입: .env 생성 ======
+            # docker compose는 기본적으로 현재 폴더의 .env를 읽지만,
+            # 명시적으로 --env-file도 사용해 안전하게 주입합니다.
+            printf "JASYPT_ENCRYPTOR_PASSWORD=%s\n" "$JASYPT_ENCRYPTOR_PASSWORD" > "$APP_HOME/.env"
+            chmod 600 "$APP_HOME/.env"
+
             # 80번 포트를 사용하는 모든 프로세스 확인 및 정리
             echo "Checking processes using port 80..."
             sudo netstat -tlnp | grep :80 || echo "No processes found on port 80"
-            
+
             # 기존 Docker 컨테이너들 정리 (포트 충돌 방지)
             echo "Stopping all Docker containers using port 80..."
             docker ps -q --filter "publish=80" | xargs -r docker stop || true
             docker ps -aq --filter "publish=80" | xargs -r docker rm || true
-            
+
             # Apache/Nginx 등이 실행 중이면 중지
             sudo systemctl stop apache2 2>/dev/null || true
             sudo systemctl stop nginx 2>/dev/null || true
             sudo systemctl stop httpd 2>/dev/null || true
-            
+
             # Docker 권한 확인 및 컨테이너 실행
             if ! docker ps >/dev/null 2>&1; then
               echo "Docker permission issue, using sudo"
-              sudo $DOCKER_COMPOSE down || true
-              sudo $DOCKER_COMPOSE up -d --build
+              sudo $DOCKER_COMPOSE --env-file "$APP_HOME/.env" down || true
+              sudo $DOCKER_COMPOSE --env-file "$APP_HOME/.env" up -d --build
             else
-              $DOCKER_COMPOSE down || true
-              $DOCKER_COMPOSE up -d --build
+              $DOCKER_COMPOSE --env-file "$APP_HOME/.env" down || true
+              $DOCKER_COMPOSE --env-file "$APP_HOME/.env" up -d --build
             fi
-            
+
             # 이미지 정리
             docker image prune -f || sudo docker image prune -f || true
-            
+
             # 헬스 체크
             echo "Waiting for application to start..."
             sleep 15
