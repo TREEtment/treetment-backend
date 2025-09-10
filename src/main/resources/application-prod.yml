@@ -1,0 +1,42 @@
+# Production profile (uses Jasypt encrypted credentials)
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: ENC(zzXigPODKStyxoJoU2CNx0hRWkCQGNaG2fxDjwiD0PIzIkJenu5Jexi/5+8HArH/KBOO3B7c3y9DxfzblLL/FuSiZm+CHE4oYeOaZX1QhHJg6Mazoax93re0Cn6dGPKvyuwH5pYt1XvgyDXviQOprkro5wDpesVH3PLwxNjvk+pyRl1bdX84p02Bs0vylKJT)
+    username: ENC(J/PcixonCFRxRikNaiWBfg==)
+    password: ENC(w6419JmPiVPnPiXV7iIcrBLMsccakGuR)
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      connection-timeout: 30000
+      validation-timeout: 5000
+  jpa:
+    hibernate:
+      ddl-auto: update
+    properties:
+      hibernate:
+        format_sql: true
+        dialect: org.hibernate.dialect.MySQLDialect
+
+# Jasypt encryptor configuration
+jasypt:
+  encryptor:
+    password: ${JASYPT_ENCRYPTOR_PASSWORD:}
+    algorithm: PBEWITHHMACSHA512ANDAES_256
+    iv-generator-classname: org.jasypt.iv.RandomIvGenerator
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: when_authorized
+
+logging:
+  level:
+    root: info
+    org.hibernate.SQL: warn
+    org.hibernate.orm.jdbc.bind: off
+

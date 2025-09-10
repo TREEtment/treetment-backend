@@ -1,0 +1,12 @@
+
+spring:
+  application:
+    name: backend
+  profiles:
+    default: dev
+  jpa:
+    open-in-view: false
+
+logging:
+  level:
+    root: info
