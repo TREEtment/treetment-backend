@@ -5,14 +5,13 @@ import lombok.Getter;
 import lombok.Builder;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
-import java.time.LocalDateTime;
 
 @Entity
 @Getter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Career {
+public class Career extends CreateUpdateAt {
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -24,10 +23,4 @@ public class Career {
     
     @Column(nullable = false)
     private String careerContent;
-    
-    @Column(nullable = false)
-    private LocalDateTime createdAt;
-    
-    private LocalDateTime updatedAt;
-    
 }

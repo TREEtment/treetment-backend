@@ -5,7 +5,7 @@ import lombok.Getter;
 import lombok.Builder;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
-import java.time.LocalDateTime;
+
 import java.util.List;
 
 @Entity
@@ -13,7 +13,7 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Counselor {
+public class Counselor extends CreateUpdateAt {
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -21,20 +21,17 @@ public class Counselor {
     
     @Column(nullable = false)
     private String name;
-    
+
+    @Lob
     private String introduction;
-    
+
+    @Lob
     private String comment;
     
     private String contactAddress;
     
     @Builder.Default
-    private Float score = 0.0f;
-    
-    @Column(nullable = false)
-    private LocalDateTime createdAt;
-    
-    private LocalDateTime updatedAt;
+    private float score = 0.0f;
     
     @OneToMany(mappedBy = "counselor", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Career> careers;

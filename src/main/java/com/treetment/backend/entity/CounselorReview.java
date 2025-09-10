@@ -5,14 +5,13 @@ import lombok.Getter;
 import lombok.Builder;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
-import java.time.LocalDateTime;
 
 @Entity
 @Getter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class CounselorReview {
+public class CounselorReview extends CreateUpdateAt {
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -23,17 +22,11 @@ public class CounselorReview {
     private Counselor counselor;
     
     @Column(nullable = false)
-    private Byte score;
+    private byte score;
     
     @Column(nullable = false)
     private String reviewTitle;
     
     @Column(nullable = false)
     private String reviewContent;
-    
-    @Column(nullable = false)
-    private LocalDateTime createdAt;
-    
-    private LocalDateTime updatedAt;
-    
 }
