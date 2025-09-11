@@ -5,10 +5,14 @@ import lombok.Getter;
 import lombok.Builder;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
 import com.treetment.backend.domain.Gender;
 import com.treetment.backend.domain.Group;
 import com.treetment.backend.domain.Role;
 import com.treetment.backend.domain.Status;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -24,19 +28,19 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true, length = 30)
     private Long userId;
     
     @Column(nullable = false)
     private String password;
     
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String email;
     
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true)
     private String nickname;
     
-    @Column(nullable = false)
+    @Column(nullable = false, length = 20)
     private String name;
     
     @Column(nullable = false)
@@ -54,11 +58,6 @@ public class User {
     @Column(nullable = false)
     private Group group;
     
-    @Column(nullable = false)
-    private LocalDateTime creationDate;
-    
-    private LocalDateTime updatedAt;
-    
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default
@@ -68,8 +67,15 @@ public class User {
     @Column(nullable = false)
     @Builder.Default
     private Status status = Status.PENDING;
-    
+
     private LocalDateTime inactiveDate;
+
+    @CreationTimestamp // Entity 생성 시각을 자동 주입
+    @Column(nullable = false)
+    private LocalDateTime creationDate;
+
+    @UpdateTimestamp // Entity 수정 시각을 자동 주입
+    private LocalDateTime updatedAt;
     
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<EmotionRecord> emotionRecords;

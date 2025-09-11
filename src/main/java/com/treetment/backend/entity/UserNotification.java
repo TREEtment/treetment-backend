@@ -5,6 +5,8 @@ import lombok.Getter;
 import lombok.Builder;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
+
 import java.time.LocalDateTime;
 
 @Entity
@@ -19,14 +21,14 @@ public class UserNotification {
     private Long key;
     
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(nullable = false)
+    @JoinColumn(name = "user_id", nullable = false)
     private User user;
     
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(nullable = false)
+    @JoinColumn(name = "notification_id", nullable = false)
     private Notification notification;
-    
+
+    @CreationTimestamp
     @Column(nullable = false)
     private LocalDateTime createdAt;
-    
 }

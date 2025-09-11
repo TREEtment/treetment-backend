@@ -5,6 +5,9 @@ import lombok.Getter;
 import lombok.Builder;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.UpdateTimestamp;
+
 import java.time.LocalDateTime;
 
 @Entity
@@ -23,10 +26,12 @@ public class EmotionTree {
     private User user;
     
     private String emotionTreeImage;
-    
+
+    @CreationTimestamp
     @Column(nullable = false)
     private LocalDateTime createdAt;
-    
+
+    @UpdateTimestamp
     private LocalDateTime updatedAt;
     
 }

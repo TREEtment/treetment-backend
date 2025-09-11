@@ -5,6 +5,8 @@ import lombok.Getter;
 import lombok.Builder;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
+
 import java.time.LocalDateTime;
 
 @Entity
@@ -27,13 +29,14 @@ public class Verification {
     
     @Column(nullable = false)
     @Builder.Default
-    private Boolean isChecked = false;
+    private boolean isChecked = false;
     
     @Column(nullable = false)
     @Builder.Default
-    private Boolean isValid = false;
-    
-    @Column(nullable = false)
+    private boolean isValid = true;
+
+    @CreationTimestamp
+    @Column(nullable = false, updatable = false)
     private LocalDateTime createdAt;
     
     @Column(nullable = false)

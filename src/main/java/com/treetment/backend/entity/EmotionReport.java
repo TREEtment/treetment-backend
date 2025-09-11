@@ -5,6 +5,8 @@ import lombok.Getter;
 import lombok.Builder;
 import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
+import org.hibernate.annotations.CreationTimestamp;
+
 import java.time.LocalDate;
 
 @Entity
@@ -28,9 +30,10 @@ public class EmotionReport {
     @Column(nullable = false)
     private String reportTitle;
     
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String reportContent;
-    
+
+    @CreationTimestamp
     @Column(nullable = false)
     private LocalDate createdAt;
     

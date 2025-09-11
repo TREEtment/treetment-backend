@@ -1,5 +1,5 @@
 package com.treetment.backend.domain;
 
 public enum Status {
-    PENDING, ACTIVE, INACTIVE
+    PENDING, ACTIVE, INACTIVE, SUSPENDED
 }
