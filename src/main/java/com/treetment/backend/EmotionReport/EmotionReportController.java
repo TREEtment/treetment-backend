@@ -1,0 +1,27 @@
+package com.treetment.backend.EmotionReport;
+
+import com.treetment.backend.EmotionReport.EmotionReportListDTO;
+import com.treetment.backend.EmotionReport.EmotionReportService;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import java.util.List;
+
+@RestController
+@RequestMapping("/api/reports")
+@RequiredArgsConstructor
+public class EmotionReportController {
+    private final EmotionReportService emotionReportService;
+
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<List<EmotionReportListDTO>> getAllReportsByUserId(@PathVariable Long userId) {
+        List<EmotionReportListDTO> reports = emotionReportService.findAllReportsByUserId(userId);
+        return ResponseEntity.ok(reports);
+    }
+    @GetMapping("/user/{userId}/{reportId}")
+    public ResponseEntity<EmotionReportDetailDTO> getReportByIdAndUserId(
+            @PathVariable Long userId,
+            @PathVariable Long reportId) {
+        EmotionReportDetailDTO report = emotionReportService.findReportByIdAndUserId(reportId, userId);
+        return ResponseEntity.ok(report);}
+}

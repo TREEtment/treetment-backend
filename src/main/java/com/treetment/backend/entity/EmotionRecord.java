@@ -35,6 +35,10 @@ public class EmotionRecord {
     @Column(columnDefinition = "TEXT")
     private String emotionContent;
 
+    @Lob
+    @Column(columnDefinition = "TEXT")
+    private String gptAnswer;
+
     @CreationTimestamp
     @Column(nullable = false)
     private LocalDateTime createdAt;
