@@ -22,6 +22,7 @@ import java.util.List;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Table(name = "users")
 public class User {
     
     @Id
@@ -55,7 +56,7 @@ public class User {
     private String image = "default image";
     
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, name = "user_group")
     private Group group;
     
     @Enumerated(EnumType.STRING)

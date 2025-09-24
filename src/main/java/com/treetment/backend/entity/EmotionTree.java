@@ -33,5 +33,8 @@ public class EmotionTree {
 
     @UpdateTimestamp
     private LocalDateTime updatedAt;
-    
+
+    public void updateImage(String emotionTreeImage) {
+        this.emotionTreeImage = emotionTreeImage;
+    }
 }
