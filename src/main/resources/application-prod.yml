@@ -22,6 +22,7 @@ jasypt:
     password: ${JASYPT_ENCRYPTOR_PASSWORD:}
     algorithm: PBEWITHSHA256AND256BITAES-CBC-BC
     provider-name: BC
+    provider-class-name: org.bouncycastle.jce.provider.BouncyCastleProvider
     iv-generator-classname: org.jasypt.iv.RandomIvGenerator
 
 management:
