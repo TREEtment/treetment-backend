@@ -7,7 +7,7 @@ import java.time.LocalDate;
 @Getter
 public class EmotionReportDetailDTO {
     private final Long id;
-    private final Long userId;
+    private final Integer userId;
     private final String reportTitle;
     private final String reportContent;
     private final Float emotionScore;
