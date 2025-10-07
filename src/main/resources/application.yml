@@ -1,9 +1,6 @@
 spring:
   application:
     name: treetment-backend
-  # 굳이 default를 강제할 필요 없으면 이 라인은 빼도 됨
-  # profiles:
-  #   default: prod
 
   jpa:
     open-in-view: false
@@ -16,9 +13,9 @@ spring:
 
   jwt:
     secret: your-super-secret-key-that-is-at-least-256-bits-long-for-production-use
-    access-expiration-ms: 1800000
-    refresh-expiration-ms: 604800000
-    temp-expiration-ms: 600000
+    access-expiration-ms: 1800000       # 30분
+    refresh-expiration-ms: 604800000    # 7일
+    temp-expiration-ms: 600000          # 10분
 
   security:
     oauth2:

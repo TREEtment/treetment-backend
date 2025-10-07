@@ -24,10 +24,9 @@ spring:
 
 jasypt:
   encryptor:
-    # 환경변수에서 받아와야 함
     password: "${JASYPT_ENCRYPTOR_PASSWORD}"
-    # BC 커스텀 알고리즘은 당분간 주석 처리 권장 (의존성 없으면 실패 요인)
-    # algorithm: PBEWITHSHA256AND256BITAES-CBC-BC
+    # 아래 커스텀은 관련 의존성 준비되기 전까진 주석 유지 권장
+    # algorithm: PBEWITHSHA256ANDAES_256
     # provider-name: BC
     # provider-class-name: org.bouncycastle.jce.provider.BouncyCastleProvider
     # iv-generator-classname: org.jasypt.iv.RandomIvGenerator
