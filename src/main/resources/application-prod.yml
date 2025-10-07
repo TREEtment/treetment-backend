@@ -2,9 +2,9 @@
 spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: ENC(S4LYFHZC5bLf2I0OFHrWsVQSIz+iEdEefY1KI8Hwjbv1H7JncuFmjBuNM1OznhtLJ2KrNtxrQpUMZ4KWRAMwMwl745JyIfFnAllJrIpwOhH6oRS8xVfFzBt/PxRq/+lGo5i0ItQ5o+VTcSj/eGWISYO0/oMWj05N3gLVTqnD8gZwFCXkeoPNL4LE0C/255RUp56cC3m5pmBUXzS5lUNfwg==)
-    username: ENC(Uv0EsPwtxAD8F9Rv0sYs5BtphDsnfcNnSCjxUNanyzo=)
-    password: ENC(e5wGGAhAInRqhYenyT7dhHSwsrcCtZF8SfqXBP/2YvA=)
+    url: "ENC(S4LYFHZC5bLf2I0OFHrWsVQSIz+iEdEefY1KI8Hwjbv1H7JncuFmjBuNM1OznhtLJ2KrNtxrQpUMZ4KWRAMwMwl745JyIfFnAllJrIpwOhH6oRS8xVfFzBt/PxRq/+lGo5i0ItQ5o+VTcSj/eGWISYO0/oMWj05N3gLVTqnD8gZwFCXkeoPNL4LE0C/255RUp56cC3m5pmBUXzS5lUNfwg==)"
+    username: "ENC(Uv0EsPwtxAD8F9Rv0sYs5BtphDsnfcNnSCjxUNanyzo=)"
+    password: "ENC(e5wGGAhAInRqhYenyT7dhHSwsrcCtZF8SfqXBP/2YvA=)"
     hikari:
       maximum-pool-size: 10
       minimum-idle: 5
@@ -19,7 +19,7 @@ spring:
         dialect: org.hibernate.dialect.MySQLDialect
 jasypt:
   encryptor:
-    password: ${JASYPT_ENCRYPTOR_PASSWORD:}
+    password: ${JASYPT_ENCRYPTOR_PASSWORD}
     algorithm: PBEWITHSHA256AND256BITAES-CBC-BC
     provider-name: BC
     provider-class-name: org.bouncycastle.jce.provider.BouncyCastleProvider
