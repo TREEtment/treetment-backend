@@ -29,12 +29,19 @@ public class EmotionReport {
     
     @Column(nullable = false)
     private String reportTitle;
-    
-    @Column(nullable = false, columnDefinition = "TEXT")
+
+    @Lob
+    @Column(columnDefinition = "TEXT")
     private String reportContent;
 
     @CreationTimestamp
     @Column(nullable = false)
     private LocalDate createdAt;
+
+    public void updateContent(String reportTitle, String reportContent, float emotionScore) {
+        this.reportTitle = reportTitle;
+        this.reportContent = reportContent;
+        this.emotionScore = emotionScore;
+    }
     
 }
