@@ -1,15 +1,19 @@
-# Production profile (uses Jasypt encrypted credentials)
 spring:
+  config:
+    activate:
+      on-profile: prod
+
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: ENC(hreV3OB6omvQztCCfq9rm6keFJqxLevWw6iMdnXr7Jib6zKqQIbmNnlyNSjPuTmTR00B3nssav0Fw96cIiRJw3fPG4andsJi+AJ8Z8hY1r4Bv4jc8ohCVFRbDgrD8dAYON836L/3+HyHA9J3+cO2gIWhfNJdA/qLY5CecTrruC1nxx+JNnLSPfz2OZ/nKZd3oUUO3vuPmsDJFz1VTUgEFX0o98IDgRAc++2DDaWl9TY=)
-    username: ENC(h8p2KtxJTzeZjMRseIT4gapTDm3Tc51u1zN3w+Tti4aVYW8MUeXYrV+l+FqYhXe+)
-    password: ENC(5GiyMjIZ/cAVONqVA2zPpm8Ck4x9kRcPpbIT8XRx+8ByIFEK7ZnTnehIRZSDIqFS)
+    url: "ENC(S4LYFHZC5bLf2I0OFHrWsVQSIz+iEdEefY1KI8Hwjbv1H7JncuFmjBuNM1OznhtLJ2KrNtxrQpUMZ4KWRAMwMwl745JyIfFnAllJrIpwOhH6oRS8xVfFzBt/PxRq/+lGo5i0ItQ5o+VTcSj/eGWISYO0/oMWj05N3gLVTqnD8gZwFCXkeoPNL4LE0C/255RUp56cC3m5pmBUXzS5lUNfwg==)"
+    username: "ENC(Uv0EsPwtxAD8F9Rv0sYs5BtphDsnfcNnSCjxUNanyzo=)"
+    password: "ENC(e5wGGAhAInRqhYenyT7dhHSwsrcCtZF8SfqXBP/2YvA=)"
     hikari:
       maximum-pool-size: 10
       minimum-idle: 5
       connection-timeout: 30000
       validation-timeout: 5000
+
   jpa:
     hibernate:
       ddl-auto: update
@@ -18,12 +22,14 @@ spring:
         format_sql: true
         dialect: org.hibernate.dialect.MySQLDialect
 
-# Jasypt encryptor configuration
 jasypt:
   encryptor:
-    password: ${JASYPT_ENCRYPTOR_PASSWORD:}
-    algorithm: PBEWITHHMACSHA512ANDAES_256
-    iv-generator-classname: org.jasypt.iv.RandomIvGenerator
+    password: "${JASYPT_ENCRYPTOR_PASSWORD}"
+    # 아래 커스텀은 관련 의존성 준비되기 전까진 주석 유지 권장
+    # algorithm: PBEWITHSHA256ANDAES_256
+    # provider-name: BC
+    # provider-class-name: org.bouncycastle.jce.provider.BouncyCastleProvider
+    # iv-generator-classname: org.jasypt.iv.RandomIvGenerator
 
 management:
   endpoints:
@@ -39,4 +45,3 @@ logging:
     root: info
     org.hibernate.SQL: warn
     org.hibernate.orm.jdbc.bind: off
-

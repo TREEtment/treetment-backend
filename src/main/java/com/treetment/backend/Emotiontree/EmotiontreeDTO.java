@@ -6,7 +6,7 @@ import java.time.LocalDateTime;
 @Getter
 public class EmotiontreeDTO {
     private final Long treeId;
-    private final Long userId;
+    private final Integer userId;
     private final String emotionTreeImage;
     private final LocalDateTime createdAt;
 
