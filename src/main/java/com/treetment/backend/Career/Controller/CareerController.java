@@ -12,7 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/careers")
+@RequestMapping("/api/careers") // 공통 URL 경로 설정
 @RequiredArgsConstructor
 public class CareerController {
     private final CareerService careerService;

@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/reviews")
+@RequestMapping("/api/reviews") // 공통 URL 경로 설정
 @RequiredArgsConstructor
 public class CounselorReviewController {
     private final CounselorReviewService reviewService;

@@ -16,38 +16,38 @@ import java.util.List;
 public class CounselorController {
     private final CounselorService counselorService;
 
-    // 1. 상담사 생성 API (POST /api/counselors)
+    // 상담사 생성 API (POST /api/counselors)
     @PostMapping
     public ResponseEntity<CounselorResponseDTO> createCounselor(@RequestBody CounselorRequestDTO requestDTO) {
         CounselorResponseDTO responseDto = counselorService.createCounselor(requestDTO);
         return ResponseEntity.status(HttpStatus.CREATED).body(responseDto);
     }
 
-    // 2. 전체 상담사 조회 API (GET /api/counselors)
+    // 전체 상담사 조회 API (GET /api/counselors)
     @GetMapping
     public ResponseEntity<List<CounselorResponseDTO>> getAllCounselors() {
         List<CounselorResponseDTO> counselors = counselorService.getAllCounselors();
         return ResponseEntity.ok(counselors);
     }
 
-    // 3. 특정 상담사 조회 API (GET /api/counselors/{id})
+    // 특정 상담사 조회 API (GET /api/counselors/{id})
     @GetMapping("/{id}")
     public ResponseEntity<CounselorResponseDTO> getCounselorById(@PathVariable Long id) {
         CounselorResponseDTO counselor = counselorService.getCounselorById(id);
         return ResponseEntity.ok(counselor);
     }
 
-    // 4. 상담사 정보 수정 API (PUT /api/counselors/{id})
+    // 상담사 정보 수정 API (PUT /api/counselors/{id})
     @PutMapping("/{id}")
     public ResponseEntity<CounselorResponseDTO> updateCounselor(@PathVariable Long id, @RequestBody CounselorRequestDTO requestDTO) {
         CounselorResponseDTO updatedCounselor = counselorService.updateCounselor(id, requestDTO);
         return ResponseEntity.ok(updatedCounselor);
     }
 
-    // 5. 상담사 삭제 API (DELETE /api/counselors/{id})
+    // 상담사 삭제 API (DELETE /api/counselors/{id})
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> deleteCounselor(@PathVariable Long id) {
         counselorService.deleteCounselor(id);
-        return ResponseEntity.noContent().build(); // 내용 없음(204 No Content) 응답
+        return ResponseEntity.noContent().build();
     }
 }
