@@ -3,7 +3,7 @@ spring:
   application:
     name: backend
   profiles:
-    default: prod
+    default: dev
   jpa:
     open-in-view: false
 
