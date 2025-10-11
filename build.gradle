@@ -46,7 +46,7 @@ dependencies {
 	
 	// Jasypt for encrypted prod credentials
 	implementation 'com.github.ulisesbocchio:jasypt-spring-boot-starter:3.0.5'
-	implementation 'org.bouncycastle:bcprov-jdk15on:1.70'
+	implementation 'org.bouncycastle:bcprov-jdk18on:1.78.1'
 
 
 	compileOnly 'org.projectlombok:lombok'
