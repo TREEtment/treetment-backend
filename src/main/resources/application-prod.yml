@@ -5,9 +5,9 @@ spring:
 
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: "ENC(S4LYFHZC5bLf2I0OFHrWsVQSIz+iEdEefY1KI8Hwjbv1H7JncuFmjBuNM1OznhtLJ2KrNtxrQpUMZ4KWRAMwMwl745JyIfFnAllJrIpwOhH6oRS8xVfFzBt/PxRq/+lGo5i0ItQ5o+VTcSj/eGWISYO0/oMWj05N3gLVTqnD8gZwFCXkeoPNL4LE0C/255RUp56cC3m5pmBUXzS5lUNfwg==)"
-    username: "ENC(Uv0EsPwtxAD8F9Rv0sYs5BtphDsnfcNnSCjxUNanyzo=)"
-    password: "ENC(e5wGGAhAInRqhYenyT7dhHSwsrcCtZF8SfqXBP/2YvA=)"
+    url: "ENC(5nLoOfk4dRACENdmNbwbcQXIzYLa0LCefZ7jVyRHc9IsDrRg0Xg6RA3KVI5Vz0X0x7Z5tzuX/t/gNQcPwc2NI1xNNTKdpjdfiQnEtdTY1wBvExTtI2O8SCyioWxlnJARE/i18973MaoLRXssUBrpVL3t3IPPjKOtVw1hrfW9faZbZyXYXLi3TJxj//2M7Oeq32dhxx6ynR4hJip5yAoNWkEtsBSzogJyBXyJBUqbuFI=)"
+    username: "ENC(vYods25swLvt5Z6V2ALldU05F6vZqoJFWpsFZjhZRAwUm/YgdiIXUlFMg707ScTW)"
+    password: "ENC(lZkN3xnNZlLrNWCQF5Dnqlhk15oMBmfJKaunxpcs3H7Pa+LaAHJyTVK01CM7cCwx)"
     hikari:
       maximum-pool-size: 10
       minimum-idle: 5
@@ -24,12 +24,10 @@ spring:
 
 jasypt:
   encryptor:
+    algorithm: PBEWITHSHA256AND256BITAES-CBC-BC
+    provider-name: BC
     password: "${JASYPT_ENCRYPTOR_PASSWORD}"
-    # 아래 커스텀은 관련 의존성 준비되기 전까진 주석 유지 권장
-    # algorithm: PBEWITHSHA256ANDAES_256
-    # provider-name: BC
-    # provider-class-name: org.bouncycastle.jce.provider.BouncyCastleProvider
-    # iv-generator-classname: org.jasypt.iv.RandomIvGenerator
+    iv-generator-classname: org.jasypt.iv.RandomIvGenerator
 
 management:
   endpoints:
