@@ -25,7 +25,8 @@ public class CounselorReviewService {
     @Transactional
     public CounselorReviewResponseDTO createReview(CounselorReviewRequestDTO requestDTO) {
         Counselor counselor = counselorRepository.findById(requestDTO.getCounselorId())
-                .orElseThrow(() -> new EntityNotFoundException("해당 ID의 상담사를 찾을 수 없습니다: " + requestDTO.getCounselorId()));
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "해당 ID의 상담사를 찾을 수 없습니다: " + requestDTO.getCounselorId()));
 
         CounselorReview review = CounselorReview.builder()
                 .counselor(counselor)
@@ -46,18 +47,20 @@ public class CounselorReviewService {
     @Transactional(readOnly = true)
     public List<CounselorReviewResponseDTO> getReviewsByCounselorId(Long counselorId) {
         if (!counselorRepository.existsById(counselorId)) {
-            throw new EntityNotFoundException("해당 ID의 상담사를 찾을 수 없습니다: " + counselorId);
+            throw new EntityNotFoundException(
+                    "해당 ID의 상담사를 찾을 수 없습니다: " + counselorId);
         }
         return reviewRepository.findByCounselorId(counselorId).stream()
                 .map(CounselorReviewResponseDTO::from)
-                .collect(Collectors.toList());
+                .toList(); // collect(Collectors.toList())
     }
 
     // 리뷰 수정
     @Transactional
     public CounselorReviewResponseDTO updateReview(Long reviewId, CounselorReviewRequestDTO requestDTO) {
         CounselorReview review = reviewRepository.findById(reviewId)
-                .orElseThrow(() -> new EntityNotFoundException("해당 ID의 리뷰를 찾을 수 없습니다: " + reviewId));
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "해당 ID의 리뷰를 찾을 수 없습니다: " + reviewId));
 
         // 리뷰 내용 수정
         review.setScore(requestDTO.getScore());
@@ -74,7 +77,8 @@ public class CounselorReviewService {
     @Transactional
     public void deleteReview(Long reviewId) {
         CounselorReview review = reviewRepository.findById(reviewId)
-                .orElseThrow(() -> new EntityNotFoundException("해당 ID의 리뷰를 찾을 수 없습니다: " + reviewId));
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "해당 ID의 리뷰를 찾을 수 없습니다: " + reviewId));
 
         Long counselorId = review.getCounselor().getId();
 
@@ -88,7 +92,8 @@ public class CounselorReviewService {
     // 상담사 평균 별점을 계산하고 업데이트하는 내부 메서드
     private void updateCounselorScore(Long counselorId) {
         Counselor counselor = counselorRepository.findById(counselorId)
-                .orElseThrow(() -> new EntityNotFoundException("해당 ID의 상담사를 찾을 수 없습니다: " + counselorId));
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "해당 ID의 상담사를 찾을 수 없습니다: " + counselorId));
 
         List<CounselorReview> reviews = reviewRepository.findByCounselorId(counselorId);
 
@@ -105,6 +110,5 @@ public class CounselorReviewService {
             float newScore = (float) (Math.round(average * 10) / 10.0);
             counselor.setScore(newScore);
         }
-        // counselorRepository.save(counselor); // @Transactional 어노테이션으로 인해 자동 저장(dirty checking)되므로 명시적 호출 불필요
     }
 }

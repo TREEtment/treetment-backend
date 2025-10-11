@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+// 상담사 관련 REST API 컨트롤러
 @RestController
 @RequestMapping("/api/counselors") // 공통 URL 경로 설정
 @RequiredArgsConstructor
@@ -39,7 +40,8 @@ public class CounselorController {
 
     // 상담사 정보 수정 API (PUT /api/counselors/{id})
     @PutMapping("/{id}")
-    public ResponseEntity<CounselorResponseDTO> updateCounselor(@PathVariable Long id, @RequestBody CounselorRequestDTO requestDTO) {
+    public ResponseEntity<CounselorResponseDTO> updateCounselor(
+            @PathVariable Long id, @RequestBody CounselorRequestDTO requestDTO) {
         CounselorResponseDTO updatedCounselor = counselorService.updateCounselor(id, requestDTO);
         return ResponseEntity.ok(updatedCounselor);
     }

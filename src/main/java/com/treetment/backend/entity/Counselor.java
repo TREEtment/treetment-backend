@@ -3,6 +3,7 @@ package com.treetment.backend.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -31,8 +32,8 @@ public class Counselor extends CreateUpdateAt {
     @Builder.Default
     private float score = 0.0f;
     
-    @OneToMany(mappedBy = "counselor", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<Career> careers;
+    @OneToMany(mappedBy = "counselor", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
+    private List<Career> careers = new ArrayList<>();
     
     @OneToMany(mappedBy = "counselor", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<CounselorReview> counselorReviews;

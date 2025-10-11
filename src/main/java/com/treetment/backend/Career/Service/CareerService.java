@@ -25,7 +25,8 @@ public class CareerService {
     public CareerResponseDTO createCareer(CareerRequestDTO requestDTO) {
         // 요청 DTO에서 counselorId를 이용해 Counselor 엔티티를 찾음
         Counselor counselor = counselorRepository.findById(requestDTO.getCounselorId())
-                .orElseThrow(() -> new EntityNotFoundException("해당 ID의 상담사를 찾을 수 없습니다: " + requestDTO.getCounselorId()));
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "해당 ID의 상담사를 찾을 수 없습니다: " + requestDTO.getCounselorId()));
 
         // 새로운 Career 엔티티를 생성하고 연관관계를 설정
         Career career = Career.builder()
@@ -44,14 +45,15 @@ public class CareerService {
         List<Career> careers = careerRepository.findByCounselorId(counselorId);
         return careers.stream()
                 .map(CareerResponseDTO  ::from)
-                .collect(Collectors.toList());
+                .toList(); // collect(Collectors.toList())
     }
 
     // 경력 내용 수정
     @Transactional
     public CareerResponseDTO updateCareer(Long careerId, String newContent) {
         Career career = careerRepository.findById(careerId)
-                .orElseThrow(() -> new EntityNotFoundException("해당 ID의 경력을 찾을 수 없습니다: " + careerId));
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "해당 ID의 경력을 찾을 수 없습니다: " + careerId));
 
         career.setCareerContent(newContent);
         // @Transactional에 의해 메서드 종료 시 자동으로 update 쿼리가 실행
@@ -62,7 +64,8 @@ public class CareerService {
     @Transactional
     public void deleteCareer(Long careerId) {
         if (!careerRepository.existsById(careerId)) {
-            throw new EntityNotFoundException("해당 ID의 경력을 찾을 수 없습니다: " + careerId);
+            throw new EntityNotFoundException(
+                    "해당 ID의 경력을 찾을 수 없습니다: " + careerId);
         }
         careerRepository.deleteById(careerId);
     }

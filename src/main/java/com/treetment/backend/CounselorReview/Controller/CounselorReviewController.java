@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+// 상담사 리뷰 관련 API 컨트롤러
 @RestController
 @RequestMapping("/api/reviews") // 공통 URL 경로 설정
 @RequiredArgsConstructor
@@ -32,7 +33,8 @@ public class CounselorReviewController {
 
     // 리뷰 수정 API (PUT /api/reviews/{reviewId})
     @PutMapping("/{reviewId}")
-    public ResponseEntity<CounselorReviewResponseDTO> updateReview(@PathVariable Long reviewId, @RequestBody CounselorReviewRequestDTO requestDTO) {
+    public ResponseEntity<CounselorReviewResponseDTO> updateReview(
+            @PathVariable Long reviewId, @RequestBody CounselorReviewRequestDTO requestDTO) {
         CounselorReviewResponseDTO updatedReview = reviewService.updateReview(reviewId, requestDTO);
         return ResponseEntity.ok(updatedReview);
     }

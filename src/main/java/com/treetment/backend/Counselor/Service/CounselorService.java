@@ -32,14 +32,15 @@ public class CounselorService {
     public List<CounselorResponseDTO> getAllCounselors() {
         return counselorRepository.findAll().stream()
                 .map(CounselorResponseDTO::from)
-                .collect(Collectors.toList());
+                .toList(); // collect(Collectors.toList())
     }
 
     // 특정 상담사 조회
     @Transactional(readOnly = true)
     public CounselorResponseDTO getCounselorById(Long id) {
         Counselor counselor = counselorRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("해당 ID의 상담사를 찾을 수 없습니다: " + id));
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "해당 ID의 상담사를 찾을 수 없습니다: " + id));
         return CounselorResponseDTO.from(counselor);
     }
 
@@ -48,7 +49,8 @@ public class CounselorService {
     public CounselorResponseDTO updateCounselor(Long id, CounselorRequestDTO requestDTO) {
         // Id로 기존 상담사 조회
         Counselor existingCounselor = counselorRepository.findById(id)
-                .orElseThrow(() -> new EntityNotFoundException("해당 ID의 상담사를 찾을 수 없습니다: " + id));
+                .orElseThrow(() -> new EntityNotFoundException(
+                        "해당 ID의 상담사를 찾을 수 없습니다: " + id));
 
         // 기본 정보 업데이트
         existingCounselor.setName(requestDTO.getName());
@@ -85,7 +87,8 @@ public class CounselorService {
     @Transactional
     public void deleteCounselor(Long id) {
         if (!counselorRepository.existsById(id)) {
-            throw new EntityNotFoundException("해당 ID의 상담사를 찾을 수 없습니다: " + id);
+            throw new EntityNotFoundException(
+                    "해당 ID의 상담사를 찾을 수 없습니다: " + id);
         }
         counselorRepository.deleteById(id);
     }

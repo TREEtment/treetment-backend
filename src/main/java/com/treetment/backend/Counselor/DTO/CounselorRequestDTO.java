@@ -26,17 +26,16 @@ public class CounselorRequestDTO {
                 .contactAddress(contactAddress)
                 .build();
 
-        // 문자열 리스트로 받은 경력들을 Career 엔티티 리스트로 변환
+        // 경력 정보가 있는 경우, Career 엔티티로 변환하여 추가
         if (careers != null && !careers.isEmpty()) {
             List<Career> careerEntities = careers.stream()
                     .map(careerContent -> Career.builder()
                             .careerContent(careerContent)
                             .counselor(counselor) // 연관관계 설정
                             .build())
-                    .collect(Collectors.toList());
+                    .toList(); // collect(Collectors.toList())
             counselor.setCareers(careerEntities);
         }
-
         return counselor;
     }
 }
