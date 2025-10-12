@@ -67,11 +67,10 @@ public class AuthService {
                 .email(request.getEmail())
                 .password(request.getPassword())
                 .nickname(request.getNickname())
-                .birthDate(request.getBirthDate())
+                .name(request.getName())
                 .role(ROLE.ROLE_USER)
                 .provider(PROVIDER.LOCAL)
                 .isActive(true)
-                .marketingAgreement(request.getMarketingAgreement())
                 .build();
         
         // 비밀번호 암호화
