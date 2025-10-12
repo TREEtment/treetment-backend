@@ -41,5 +41,10 @@ public class EmotionRecord {
     @CreationTimestamp
     @Column(nullable = false)
     private LocalDateTime createdAt;
-    
+    public void update(String title, String content, float score, String gptAnswer) {
+        this.emotionTitle = title;
+        this.emotionContent = content;
+        this.emotionScore = score;
+        this.gptAnswer = gptAnswer;
+    }
 }
