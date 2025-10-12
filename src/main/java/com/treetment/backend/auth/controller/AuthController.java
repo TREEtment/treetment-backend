@@ -25,13 +25,13 @@ public class AuthController {
     private final AuthService authService;
     
     @PostMapping("/register")
-    public ResponseEntity<ApiResponse<UserResponse>> register(@Valid @RequestBody RegisterRequest request) {
+    public ResponseEntity<ApiResponse<UserResponse>> register(@RequestBody RegisterRequest request) {
         UserResponse user = authService.register(request);
         return ResponseEntity.ok(ApiResponse.success("회원가입이 완료되었습니다.", user));
     }
     
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse<String>> login(@Valid @RequestBody LoginRequest request, 
+    public ResponseEntity<ApiResponse<String>> login(@RequestBody LoginRequest request, 
                                                    HttpServletResponse response) {
         authService.login(request, response);
         return ResponseEntity.ok(ApiResponse.success("로그인이 완료되었습니다.", null));

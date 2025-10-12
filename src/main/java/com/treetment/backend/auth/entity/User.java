@@ -10,7 +10,6 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -30,7 +29,8 @@ public class User extends Core {
     @Column(unique = true)
     private String nickname;
     
-    private LocalDate birthDate;
+    @Column(nullable = false)
+    private String name;
     
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
@@ -50,18 +50,15 @@ public class User extends Core {
     @Column(nullable = false)
     private Boolean isActive = false;
     
-    @Column(nullable = false)
-    private Boolean marketingAgreement = false;
-    
     @Builder
-    public User(String email, String password, String nickname, LocalDate birthDate, 
+    public User(String email, String password, String nickname, String name,
                 ROLE role, PROVIDER provider, String providerId, String socialAccessToken, 
                 String socialRefreshToken, LocalDateTime accessTokenExpiresAt, 
-                String profileImageUrl, Boolean isActive, Boolean marketingAgreement) {
+                String profileImageUrl, Boolean isActive) {
         this.email = email;
         this.password = password;
         this.nickname = nickname;
-        this.birthDate = birthDate;
+        this.name = name;
         this.role = role;
         this.provider = provider;
         this.providerId = providerId;
@@ -70,7 +67,6 @@ public class User extends Core {
         this.accessTokenExpiresAt = accessTokenExpiresAt;
         this.profileImageUrl = profileImageUrl;
         this.isActive = isActive;
-        this.marketingAgreement = marketingAgreement;
     }
     
     public void encodePassword(PasswordEncoder passwordEncoder) {
@@ -81,10 +77,9 @@ public class User extends Core {
         this.password = passwordEncoder.encode(newPassword);
     }
     
-    public void updateProfile(String nickname, LocalDate birthDate, Boolean marketingAgreement) {
+    public void updateProfile(String nickname, String name) {
         this.nickname = nickname;
-        this.birthDate = birthDate;
-        this.marketingAgreement = marketingAgreement;
+        this.name = name;
     }
     
     public void activate() {
