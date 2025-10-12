@@ -33,6 +33,7 @@ public class Counselor extends CreateUpdateAt {
     private float score = 0.0f;
     
     @OneToMany(mappedBy = "counselor", cascade = CascadeType.ALL, fetch = FetchType.LAZY, orphanRemoval = true)
+    @Builder.Default
     private List<Career> careers = new ArrayList<>();
     
     @OneToMany(mappedBy = "counselor", cascade = CascadeType.ALL, fetch = FetchType.LAZY)

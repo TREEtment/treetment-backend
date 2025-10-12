@@ -1,7 +1,6 @@
 package com.treetment.backend.security.filter;
 
 import com.treetment.backend.auth.repository.UserRepository;
-import com.treetment.backend.global.util.ResponseUtil;
 import com.treetment.backend.security.principle.CustomPrincipal;
 import com.treetment.backend.security.util.JwtUtil;
 import jakarta.servlet.FilterChain;
@@ -25,7 +24,6 @@ import static com.treetment.backend.security.util.JwtUtil.JWT_CATEGORY_ACCESS;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
     private final JwtUtil jwtUtil;
     private final UserRepository userRepository;
-    private final ResponseUtil responseUtil;
     
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
@@ -35,7 +33,6 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             try {
                 String category = jwtUtil.getCategory(accessToken);
                 String email = jwtUtil.getEmail(accessToken);
-                String role = jwtUtil.getRole(accessToken);
                 
                 if (JWT_CATEGORY_ACCESS.equals(category)) {
                     var user = userRepository.findByEmail(email)

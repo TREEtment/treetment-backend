@@ -1,7 +1,5 @@
 package com.treetment.backend.Emotiontree;
 
-import com.treetment.backend.Emotiontree.EmotiontreeDTO;
-import com.treetment.backend.Emotiontree.EmotiontreeService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

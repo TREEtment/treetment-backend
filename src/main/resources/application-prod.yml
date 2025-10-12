@@ -38,6 +38,21 @@ management:
     health:
       show-details: when_authorized
 
+openai:
+  api:
+    key: "ENC(P+Q7qdYh2MoN9BouTHdG2P05ZzdZWe/8P9Zzic8XFmmEvph4t0MiiC3DLrnFnblhmDSq0gq7JbGx/dyjdPevPzwtA3RzMV9AG7k5NOPIqDJ6GBnIbT3fEWYKZ0on0DYckFhYA3405hVDcaMjL8ZghZfM2dOu/iHkvY57HR+PQPVuabKU81EfCweZmXlTJMKpNAadnjEBRLQdV0/EF1rA+fnMvo8TjJ3MqEH1PP714/cNO5Q4MhbC+FNyyNHUWk4tWLrqa0OQTM4IoozzQF0Brg==)"
+
+ai:
+  server:
+    url: "ENC(jZwQeNXnLOYOKxAxfQGcehURWQXk2a9COw/hTeEJRuEaI8H2xExPD9BRmFRlzC5iT0h5gQx6EG6eCygibQyUyQ==)"
+
+papago:
+  api:
+    url: "ENC(G+ovwtS6yPOsLFm+Z+amWFvdB0a1Xs+VoX0oKujAIr3nw34/4ok0z1on2vgw2d7GurwHGyxa1K/z6Us8Wgln4oJpxBDsCcFZNbyBHYUKkMJ0HvzL/MOJfTHB0Vigal5C)"
+    key:
+      id: "ENC(RhUDCqRXXDeFaN3PCYuqA6PuxDOiexumVKXzdb8EVxDn0U2AnsE7XXYSonGaMlZk)"
+      secret: "ENC(m/da7d/sCupZZp7H6KusFoHbaK/eLFMvuW472GldXJjXyjRFCpnazpZjbgEvWI23nZtcDGPzvhbT72sbDFtEK8jkvUJ/Jf20moSpXvrG3Rw=)"
+
 logging:
   level:
     root: info

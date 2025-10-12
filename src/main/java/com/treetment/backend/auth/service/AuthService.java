@@ -14,7 +14,6 @@ import com.treetment.backend.auth.repository.PasswordResetTokenRepository;
 import com.treetment.backend.auth.repository.RefreshTokenRepository;
 import com.treetment.backend.auth.repository.UserRepository;
 import com.treetment.backend.security.util.JwtUtil;
-import com.treetment.backend.global.util.ResponseUtil;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -23,7 +22,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -45,7 +43,6 @@ public class AuthService {
     private final PasswordEncoder passwordEncoder;
     private final AuthenticationManager authenticationManager;
     private final JwtUtil jwtUtil;
-    private final ResponseUtil responseUtil;
     
     @Value("${spring.jwt.access-expiration-ms}")
     private Long accessTokenExpirationMs;
@@ -91,7 +88,7 @@ public class AuthService {
     public void login(LoginRequest request, HttpServletResponse response) {
         try {
             // 인증 시도
-            Authentication authentication = authenticationManager.authenticate(
+            authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
             );
             
@@ -152,7 +149,7 @@ public class AuthService {
     
     @Transactional
     public void requestPasswordReset(String email) {
-        User user = userRepository.findByEmail(email)
+        userRepository.findByEmail(email)
                 .orElseThrow(() -> new AuthException(AuthErrorCode.USER_NOT_FOUND));
         
         // 기존 토큰 삭제

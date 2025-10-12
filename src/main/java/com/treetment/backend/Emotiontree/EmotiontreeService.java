@@ -1,7 +1,5 @@
 package com.treetment.backend.Emotiontree;
 
-import com.treetment.backend.Emotiontree.EmotiontreeRepository;
-import com.treetment.backend.Emotiontree.EmotiontreeDTO;
 import com.treetment.backend.entity.EmotionTree;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
