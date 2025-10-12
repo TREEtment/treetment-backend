@@ -51,6 +51,7 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
             user = User.builder()
                     .email(email)
                     .nickname(nickname != null ? nickname : email.split("@")[0])
+                    .name(nickname != null ? nickname : email.split("@")[0]) // OAuth2에서는 name을 nickname과 동일하게 설정
                     .role(ROLE.ROLE_TEMP)
                     .provider(PROVIDER.fromString(registrationId))
                     .providerId(providerId)
@@ -58,7 +59,6 @@ public class CustomOAuth2UserService extends DefaultOAuth2UserService {
                     .accessTokenExpiresAt(LocalDateTime.now().plusHours(1))
                     .profileImageUrl(profileImageUrl)
                     .isActive(false)
-                    .marketingAgreement(false)
                     .build();
             } else {
                 // 기존 사용자의 소셜 토큰 정보 업데이트
