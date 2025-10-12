@@ -15,7 +15,8 @@ public enum AuthErrorCode {
     PASSWORD_RESET_TOKEN_EXPIRED("AUTH_010", "Password reset token expired", HttpStatus.BAD_REQUEST),
     PASSWORD_RESET_TOKEN_ALREADY_USED("AUTH_011", "Password reset token already used", HttpStatus.BAD_REQUEST),
     USER_ALREADY_ACTIVE("AUTH_012", "User is already active", HttpStatus.BAD_REQUEST),
-    USER_NOT_ACTIVE("AUTH_013", "User is not active", HttpStatus.FORBIDDEN);
+    USER_NOT_ACTIVE("AUTH_013", "User is not active", HttpStatus.FORBIDDEN),
+    INTERNAL_SERVER_ERROR("AUTH_014", "Internal server error", HttpStatus.INTERNAL_SERVER_ERROR);
     
     private final String code;
     private final String message;
