@@ -7,7 +7,7 @@ import java.time.LocalDateTime;
 @Getter
 public class EmotionRecordDetailDTO {
     private final Long id;
-    private final Long userId;
+    private final Integer userId;
     private final String emotionTitle;
     private final String emotionContent;
     private final Float emotionScore;

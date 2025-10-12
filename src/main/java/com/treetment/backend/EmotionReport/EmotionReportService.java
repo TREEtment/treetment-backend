@@ -1,10 +1,7 @@
 package com.treetment.backend.EmotionReport;
 
-import com.treetment.backend.EmotionReport.EmotionReportListDTO;
 import com.treetment.backend.entity.EmotionReport;
 import com.treetment.backend.entity.EmotionRecord;
-import com.treetment.backend.EmotionReport.EmotionReportRepository;
-import com.treetment.backend.EmotionReport.EmotionReportDetailDTO;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

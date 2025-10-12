@@ -1,7 +1,5 @@
 package com.treetment.backend.security.handler;
 
-import com.treetment.backend.auth.domain.ROLE;
-import com.treetment.backend.auth.service.AuthService;
 import com.treetment.backend.global.util.ResponseUtil;
 import com.treetment.backend.security.logger.SecurityEventLogger;
 import com.treetment.backend.security.principle.CustomPrincipal;

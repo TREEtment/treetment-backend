@@ -1,7 +1,5 @@
 package com.treetment.backend.EmotionReport;
 
-import com.treetment.backend.EmotionReport.EmotionReportListDTO;
-import com.treetment.backend.EmotionReport.EmotionReportService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;

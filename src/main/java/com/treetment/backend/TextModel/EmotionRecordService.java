@@ -1,6 +1,7 @@
 package com.treetment.backend.TextModel;
 import com.treetment.backend.entity.EmotionRecord;
-import com.treetment.backend.entity.User;
+import com.treetment.backend.auth.entity.User;
+import com.treetment.backend.auth.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -20,7 +21,7 @@ public class EmotionRecordService {
     private final PapagoService papagoService;
 
     @Transactional
-    public EmotionRecordDetailDTO createRecord(Long userId, EmotionRecordCreateRequestDTO requestDTO) {
+    public EmotionRecordDetailDTO createRecord(Integer userId, EmotionRecordCreateRequestDTO requestDTO) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new EntityNotFoundException("사용자를 찾을 수 없습니다: " + userId));
         String originalContent = requestDTO.getEmotionContent();

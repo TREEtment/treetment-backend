@@ -16,7 +16,7 @@ public class EmotionRecordController {
             @PathVariable Long userId,
             @RequestBody EmotionRecordCreateRequestDTO requestDTO) {
 
-        EmotionRecordDetailDTO createdRecord = emotionRecordService.createRecord(userId, requestDTO);
+        EmotionRecordDetailDTO createdRecord = emotionRecordService.createRecord(userId.intValue(), requestDTO);
         URI location = URI.create(String.format("/api/records/%d", createdRecord.getId()));
 
         return ResponseEntity.created(location).body(createdRecord);

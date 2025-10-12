@@ -1,9 +1,6 @@
 package com.treetment.backend.Calendar;
 
-import com.treetment.backend.Calendar.CalendarDetailDTO;
-import com.treetment.backend.Calendar.CalendarListDTO;
 import com.treetment.backend.entity.EmotionRecord;
-import com.treetment.backend.Calendar.CalendarRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

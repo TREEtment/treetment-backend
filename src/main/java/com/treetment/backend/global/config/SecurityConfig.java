@@ -2,11 +2,9 @@ package com.treetment.backend.global.config;
 
 import com.treetment.backend.auth.repository.UserRepository;
 import com.treetment.backend.auth.service.CustomOAuth2UserService;
-import com.treetment.backend.global.util.ResponseUtil;
 import com.treetment.backend.security.filter.JwtAuthenticationFilter;
 import com.treetment.backend.security.handler.OAuth2LoginFailureHandler;
 import com.treetment.backend.security.handler.OAuth2LoginSuccessHandler;
-import com.treetment.backend.security.logger.SecurityEventLogger;
 import com.treetment.backend.security.util.JwtUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -33,8 +31,6 @@ public class SecurityConfig {
     
     private final UserRepository userRepository;
     private final JwtUtil jwtUtil;
-    private final ResponseUtil responseUtil;
-    private final SecurityEventLogger securityEventLogger;
     private final CustomOAuth2UserService customOAuth2UserService;
     private final OAuth2LoginSuccessHandler oAuth2LoginSuccessHandler;
     private final OAuth2LoginFailureHandler oAuth2LoginFailureHandler;
@@ -67,7 +63,7 @@ public class SecurityConfig {
                 .successHandler(oAuth2LoginSuccessHandler)
                 .failureHandler(oAuth2LoginFailureHandler)
             )
-            .addFilterBefore(new JwtAuthenticationFilter(jwtUtil, userRepository, responseUtil), 
+            .addFilterBefore(new JwtAuthenticationFilter(jwtUtil, userRepository), 
                            UsernamePasswordAuthenticationFilter.class);
         
         return http.build();

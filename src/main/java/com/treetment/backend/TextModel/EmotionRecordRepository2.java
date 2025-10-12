@@ -7,5 +7,5 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 
 public interface EmotionRecordRepository2 extends JpaRepository<EmotionRecord, Long>{
-    Optional<EmotionRecord> findTopByUser_IdAndCreatedAtBetweenOrderByCreatedAtDesc(Long userId, LocalDateTime startDateTime, LocalDateTime endDateTime);
+    Optional<EmotionRecord> findTopByUser_IdAndCreatedAtBetweenOrderByCreatedAtDesc(Integer userId, LocalDateTime startDateTime, LocalDateTime endDateTime);
 }
