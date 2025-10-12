@@ -44,7 +44,7 @@ openai:
 
 ai:
   server:
-    url: "ENC(jZwQeNXnLOYOKxAxfQGcehURWQXk2a9COw/hTeEJRuEaI8H2xExPD9BRmFRlzC5iT0h5gQx6EG6eCygibQyUyQ==)"
+    url: "ENC(Zjlau059N1SSguQZDKzZGCA/KGT8eaVpHwWeJIsOj9dfd6rDszv8fGZ+rc8Ox2R22s9yg71pXpBsit7ih21v9A==)"
 
 papago:
   api:
