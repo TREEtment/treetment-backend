@@ -22,6 +22,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -41,7 +42,6 @@ public class AuthService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final PasswordEncoder passwordEncoder;
-    private final AuthenticationManager authenticationManager;
     private final JwtUtil jwtUtil;
     
     @Value("${spring.jwt.access-expiration-ms}")
@@ -85,30 +85,25 @@ public class AuthService {
     
     @Transactional
     public void login(LoginRequest request, HttpServletResponse response) {
-        try {
-            // 인증 시도
-            authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
-            );
-            
-            // 사용자 정보 가져오기
-            User user = userRepository.findByEmail(request.getEmail())
-                    .orElseThrow(() -> new AuthException(AuthErrorCode.USER_NOT_FOUND));
-            
-            // 사용자 활성화 상태 확인
-            if (!user.getIsActive()) {
-                throw new AuthException(AuthErrorCode.USER_NOT_ACTIVE);
-            }
-            
-            // 토큰 발급
-            issueTokensOnLogin(response, null, user.getEmail(), user.getRole().name());
-            
-            log.info("User logged in successfully: {}", user.getEmail());
-            
-        } catch (AuthenticationException e) {
+        // 사용자 정보 가져오기
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new AuthException(AuthErrorCode.USER_NOT_FOUND));
+        
+        // 비밀번호 검증
+        if (!passwordEncoder.matches(request.getPassword(), user.getPassword())) {
             log.warn("Login failed for email: {}", request.getEmail());
             throw new AuthException(AuthErrorCode.INVALID_CREDENTIALS);
         }
+        
+        // 사용자 활성화 상태 확인
+        if (!user.getIsActive()) {
+            throw new AuthException(AuthErrorCode.USER_NOT_ACTIVE);
+        }
+        
+        // 토큰 발급
+        issueTokensOnLogin(response, null, user.getEmail(), user.getRole().name());
+        
+        log.info("User logged in successfully: {}", user.getEmail());
     }
     
     @Transactional
