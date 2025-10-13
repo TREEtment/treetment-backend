@@ -108,6 +108,7 @@ public class AuthService {
         
         // LoginResponse 반환
         return LoginResponse.builder()
+                .userId(user.getId())
                 .email(user.getEmail())
                 .name(user.getName())
                 .nickname(user.getNickname())
