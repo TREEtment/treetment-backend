@@ -3,6 +3,7 @@ package com.treetment.backend.auth.service;
 import com.treetment.backend.auth.domain.PROVIDER;
 import com.treetment.backend.auth.domain.ROLE;
 import com.treetment.backend.auth.dto.LoginRequest;
+import com.treetment.backend.auth.dto.LoginResponse;
 import com.treetment.backend.auth.dto.RegisterRequest;
 import com.treetment.backend.auth.dto.UserResponse;
 import com.treetment.backend.auth.entity.PasswordResetToken;
@@ -84,7 +85,7 @@ public class AuthService {
     }
     
     @Transactional
-    public void login(LoginRequest request, HttpServletResponse response) {
+    public LoginResponse login(LoginRequest request, HttpServletResponse response) {
         // 사용자 정보 가져오기
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new AuthException(AuthErrorCode.USER_NOT_FOUND));
@@ -104,6 +105,13 @@ public class AuthService {
         issueTokensOnLogin(response, null, user.getEmail(), user.getRole().name());
         
         log.info("User logged in successfully: {}", user.getEmail());
+        
+        // LoginResponse 반환
+        return LoginResponse.builder()
+                .email(user.getEmail())
+                .name(user.getName())
+                .nickname(user.getNickname())
+                .build();
     }
     
     @Transactional

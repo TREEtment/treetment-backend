@@ -1,6 +1,7 @@
 package com.treetment.backend.auth.controller;
 
 import com.treetment.backend.auth.dto.LoginRequest;
+import com.treetment.backend.auth.dto.LoginResponse;
 import com.treetment.backend.auth.dto.RegisterRequest;
 import com.treetment.backend.auth.dto.UserResponse;
 import com.treetment.backend.auth.entity.User;
@@ -31,10 +32,10 @@ public class AuthController {
     }
     
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse<String>> login(@RequestBody LoginRequest request, 
-                                                   HttpServletResponse response) {
-        authService.login(request, response);
-        return ResponseEntity.ok(ApiResponse.success("로그인이 완료되었습니다.", null));
+    public ResponseEntity<ApiResponse<LoginResponse>> login(@RequestBody LoginRequest request, 
+                                                          HttpServletResponse response) {
+        LoginResponse loginResponse = authService.login(request, response);
+        return ResponseEntity.ok(ApiResponse.success("로그인이 완료되었습니다.", loginResponse));
     }
     
     @PostMapping("/logout")
