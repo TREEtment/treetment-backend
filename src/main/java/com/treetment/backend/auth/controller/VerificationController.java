@@ -9,7 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/auth/verification")
+@RequestMapping("/api/auth/verification")
 @RequiredArgsConstructor
 @Tag(name = "이메일 인증", description = "이메일 인증 코드 발송 및 확인 API")
 public class VerificationController {
