@@ -1,6 +1,6 @@
 package com.treetment.backend.security.filter;
 
-import com.treetment.backend.auth.repository.UserRepository;
+import com.treetment.backend.user.repository.UserRepository;
 import com.treetment.backend.security.principle.CustomPrincipal;
 import com.treetment.backend.security.util.JwtUtil;
 import jakarta.servlet.FilterChain;

@@ -1,4 +1,4 @@
-package com.treetment.backend.auth.entity;
+package com.treetment.backend.user.entity;
 
 import com.treetment.backend.auth.domain.PROVIDER;
 import com.treetment.backend.auth.domain.ROLE;
@@ -20,40 +20,40 @@ public class User extends Core {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
-    
+
     @Column(unique = true, nullable = false)
     private String email;
-    
+
     private String password;
-    
+
     @Column(unique = true)
     private String nickname;
-    
+
     @Column(nullable = false)
     private String name;
-    
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private ROLE role;
-    
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private PROVIDER provider;
-    
+
     private String providerId;
     private String socialAccessToken;
     private String socialRefreshToken;
     private LocalDateTime accessTokenExpiresAt;
-    
+
     private String profileImageUrl;
-    
+
     @Column(nullable = false)
     private Boolean isActive = false;
-    
+
     @Builder
     public User(String email, String password, String nickname, String name,
-                ROLE role, PROVIDER provider, String providerId, String socialAccessToken, 
-                String socialRefreshToken, LocalDateTime accessTokenExpiresAt, 
+                ROLE role, PROVIDER provider, String providerId, String socialAccessToken,
+                String socialRefreshToken, LocalDateTime accessTokenExpiresAt,
                 String profileImageUrl, Boolean isActive) {
         this.email = email;
         this.password = password;
@@ -68,24 +68,28 @@ public class User extends Core {
         this.profileImageUrl = profileImageUrl;
         this.isActive = isActive;
     }
-    
+
     public void encodePassword(PasswordEncoder passwordEncoder) {
         this.password = passwordEncoder.encode(this.password);
     }
-    
+
     public void updatePassword(String newPassword, PasswordEncoder passwordEncoder) {
         this.password = passwordEncoder.encode(newPassword);
     }
-    
+
     public void updateProfile(String nickname, String name) {
         this.nickname = nickname;
         this.name = name;
     }
-    
+
+    public void updateProfileImage(String profileImageUrl) {
+        this.profileImageUrl = profileImageUrl;
+    }
+
     public void activate() {
         this.isActive = true;
     }
-    
+
     public void updateSocialTokens(String socialAccessToken, String socialRefreshToken, LocalDateTime accessTokenExpiresAt) {
         this.socialAccessToken = socialAccessToken;
         this.socialRefreshToken = socialRefreshToken;

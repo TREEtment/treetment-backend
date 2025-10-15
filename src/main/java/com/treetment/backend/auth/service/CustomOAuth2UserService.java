@@ -2,10 +2,10 @@ package com.treetment.backend.auth.service;
 
 import com.treetment.backend.auth.domain.PROVIDER;
 import com.treetment.backend.auth.domain.ROLE;
-import com.treetment.backend.auth.entity.User;
+import com.treetment.backend.user.entity.User;
 import com.treetment.backend.auth.oauth2.OAuth2UserInfo;
 import com.treetment.backend.auth.oauth2.OAuth2UserInfoFactory;
-import com.treetment.backend.auth.repository.UserRepository;
+import com.treetment.backend.user.repository.UserRepository;
 import com.treetment.backend.security.principle.CustomPrincipal;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

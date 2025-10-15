@@ -1,6 +1,6 @@
-package com.treetment.backend.auth.repository;
+package com.treetment.backend.user.repository;
 
-import com.treetment.backend.auth.entity.User;
+import com.treetment.backend.user.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

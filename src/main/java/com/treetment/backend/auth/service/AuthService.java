@@ -5,15 +5,16 @@ import com.treetment.backend.auth.domain.ROLE;
 import com.treetment.backend.auth.dto.LoginRequest;
 import com.treetment.backend.auth.dto.LoginResponse;
 import com.treetment.backend.auth.dto.RegisterRequest;
-import com.treetment.backend.auth.dto.UserResponse;
+import com.treetment.backend.user.dto.UserResponse;
 import com.treetment.backend.auth.entity.PasswordResetToken;
 import com.treetment.backend.auth.entity.RefreshToken;
-import com.treetment.backend.auth.entity.User;
+import com.treetment.backend.user.entity.User;
 import com.treetment.backend.auth.exception.AuthErrorCode;
 import com.treetment.backend.auth.exception.AuthException;
 import com.treetment.backend.auth.repository.PasswordResetTokenRepository;
 import com.treetment.backend.auth.repository.RefreshTokenRepository;
-import com.treetment.backend.auth.repository.UserRepository;
+import com.treetment.backend.user.repository.UserRepository;
+import com.treetment.backend.auth.verification.EmailVerificationService;
 import com.treetment.backend.security.util.JwtUtil;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -44,6 +45,7 @@ public class AuthService {
     private final PasswordResetTokenRepository passwordResetTokenRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtUtil jwtUtil;
+    private final EmailVerificationService emailVerificationService;
     
     @Value("${spring.jwt.access-expiration-ms}")
     private Long accessTokenExpirationMs;
@@ -53,6 +55,14 @@ public class AuthService {
     
     @Transactional
     public UserResponse register(RegisterRequest request) {
+        // 이메일 인증 여부 확인 (인증 완료된 이메일만 허용)
+        // 인증 미완료 시 예외 처리
+        // AuthErrorCode에 적절한 항목이 없다면 USER_NOT_ACTIVE 또는 INVALID_CREDENTIALS를 재사용하거나, 새 코드를 추가할 수 있음
+        // 여기서는 USER_NOT_ACTIVE 재사용
+        if (!emailVerificationService.isEmailVerified(request.getEmail())) {
+            throw new AuthException(AuthErrorCode.USER_NOT_ACTIVE);
+        }
+        
         // 이메일 중복 확인
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new AuthException(AuthErrorCode.EMAIL_ALREADY_EXISTS);

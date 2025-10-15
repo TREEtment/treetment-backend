@@ -1,6 +1,6 @@
 package com.treetment.backend.entity;
 
-import com.treetment.backend.auth.entity.User;
+import com.treetment.backend.user.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
