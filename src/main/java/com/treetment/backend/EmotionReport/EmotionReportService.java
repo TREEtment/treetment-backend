@@ -55,7 +55,7 @@ public class EmotionReportService {
 
         double averageScore = weeklyRecords.stream().mapToDouble(EmotionRecord::getEmotionScore).average().orElse(0.0);
         float finalScore = (float) (Math.round(averageScore * 10.0) / 10.0);
-        int weekOfMonth = endOfLastWeek.get(WeekFields.of(Locale.KOREA).weekOfMonth());
+        int weekOfMonth = (endOfLastWeek.getDayOfMonth() - 1) / 7 + 1;
         String title = String.format("%d월 %d주차 리포트", endOfLastWeek.getMonthValue(), weekOfMonth);
 
         List<String> gptAnswers = weeklyRecords.stream().map(EmotionRecord::getGptAnswer).collect(Collectors.toList());
@@ -72,7 +72,7 @@ public class EmotionReportService {
                             .emotionScore(finalScore)
                             .reportTitle(title)
                             .reportContent(gptContent)
-                            .createdAt(endOfLastWeek)
+                            .createdAt(startOfLastWeek)
                             .build();
                 });
 
