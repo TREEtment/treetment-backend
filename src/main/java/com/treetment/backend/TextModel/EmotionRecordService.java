@@ -1,7 +1,7 @@
 package com.treetment.backend.TextModel;
 import com.treetment.backend.entity.EmotionRecord;
-import com.treetment.backend.auth.entity.User;
-import com.treetment.backend.auth.repository.UserRepository;
+import com.treetment.backend.user.entity.User;
+import com.treetment.backend.user.repository.UserRepository;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;

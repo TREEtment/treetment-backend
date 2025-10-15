@@ -3,11 +3,13 @@ package com.treetment.backend.auth.controller;
 import com.treetment.backend.auth.dto.LoginRequest;
 import com.treetment.backend.auth.dto.LoginResponse;
 import com.treetment.backend.auth.dto.RegisterRequest;
-import com.treetment.backend.auth.dto.UserResponse;
-import com.treetment.backend.auth.entity.User;
+import com.treetment.backend.user.dto.UserResponse;
+import com.treetment.backend.user.entity.User;
 import com.treetment.backend.auth.service.AuthService;
 import com.treetment.backend.global.dto.response.ApiResponse;
 import com.treetment.backend.security.principle.CustomPrincipal;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -21,24 +23,28 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/auth")
 @RequiredArgsConstructor
 @Slf4j
+@Tag(name = "인증", description = "로그인, 회원가입, 로그아웃 API")
 public class AuthController {
     
     private final AuthService authService;
     
     @PostMapping("/register")
+    @Operation(summary = "회원가입", description = "새로운 사용자 계정을 생성합니다.")
     public ResponseEntity<ApiResponse<UserResponse>> register(@RequestBody RegisterRequest request) {
         UserResponse user = authService.register(request);
         return ResponseEntity.ok(ApiResponse.success("회원가입이 완료되었습니다.", user));
     }
     
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse<LoginResponse>> login(@RequestBody LoginRequest request, 
+    @Operation(summary = "로그인", description = "이메일과 비밀번호로 로그인합니다.")
+    public ResponseEntity<ApiResponse<LoginResponse>> login(@RequestBody LoginRequest request,
                                                           HttpServletResponse response) {
         LoginResponse loginResponse = authService.login(request, response);
         return ResponseEntity.ok(ApiResponse.success("로그인이 완료되었습니다.", loginResponse));
     }
     
     @PostMapping("/logout")
+    @Operation(summary = "로그아웃", description = "현재 사용자를 로그아웃합니다.")
     public ResponseEntity<ApiResponse<String>> logout(HttpServletResponse response) {
         authService.logout(response);
         return ResponseEntity.ok(ApiResponse.success("로그아웃이 완료되었습니다.", null));

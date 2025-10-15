@@ -1,8 +1,8 @@
-package com.treetment.backend.auth.dto;
+package com.treetment.backend.user.dto;
 
 import com.treetment.backend.auth.domain.PROVIDER;
 import com.treetment.backend.auth.domain.ROLE;
-import com.treetment.backend.auth.entity.User;
+import com.treetment.backend.user.entity.User;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -25,7 +25,7 @@ public class UserResponse {
     private Boolean isActive;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
-    
+
     public static UserResponse from(User user) {
         return UserResponse.builder()
                 .id(user.getId())

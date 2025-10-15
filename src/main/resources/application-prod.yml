@@ -58,3 +58,13 @@ logging:
     root: info
     org.hibernate.SQL: warn
     org.hibernate.orm.jdbc.bind: off
+
+cloud:
+  aws:
+    credentials:
+      access-key: "ENC(QiSdfP2GduWlvif0YbPbss/L3YP5MXVxXe+xbJSsHL0SzWru2urnNLWFnLJRU4/FwX+CVWhEqrf8PJPhcOuTLw==)" # IAM 액세스 키
+      secret-key: "ENC(qVfqdNcc0GQFAe5qPdl/txk6DssRPOzuGyymsb5E5Lv9w2XWzO59GrW2O8sQdHC4d89BKF1vzYrDap3iJa/5eXbY7ULX62sm+qGixbTN7Z4=)" # IAM 비밀 액세스 키
+    s3:
+      bucket: "ENC(F9iuNbNEY8SMboInVUM+Qsk2IfG/x0MCKHIm1SelZjZjsfM40sLe5B+2sWfEmtarJC1RNN0Edw8uxLApUVjUDA==)" # S3 버킷명
+    region:
+      static: "ENC(qTocIjMdJQSX5wojQE324QkRfDedjOD/n5QSZjb/Cja3SfrkuoSbrbvc+uXDIwYj)"

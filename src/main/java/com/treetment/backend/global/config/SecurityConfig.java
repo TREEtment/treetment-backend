@@ -1,6 +1,6 @@
 package com.treetment.backend.global.config;
 
-import com.treetment.backend.auth.repository.UserRepository;
+import com.treetment.backend.user.repository.UserRepository;
 import com.treetment.backend.auth.service.CustomOAuth2UserService;
 import com.treetment.backend.security.filter.JwtAuthenticationFilter;
 import com.treetment.backend.security.handler.OAuth2LoginFailureHandler;
@@ -47,11 +47,18 @@ public class SecurityConfig {
         http
             .csrf(csrf -> csrf.disable())
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
+            .httpBasic(basic -> basic.disable())
+            .formLogin(form -> form.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(authz -> authz
-                .requestMatchers("/auth/**", "/login/**", "/oauth2/**").permitAll()
-                .requestMatchers("/actuator/**").permitAll()
+                        .requestMatchers("/auth/**", "/login/**", "/oauth2/**", "/files/**").permitAll()
+                        .requestMatchers("/actuator/**").permitAll()
+                        .requestMatchers("/docs/**", "/api-docs/**", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/swagger-ui/index.html").permitAll()
+                        .requestMatchers("/swagger-ui.html", "/swagger-ui/index.html", "/v3/api-docs", "/v3/api-docs.yaml", "/v3/api-docs.json").permitAll()
                 .anyRequest().authenticated()
+            )
+            .exceptionHandling(ex -> ex
+                .authenticationEntryPoint((request, response, authException) -> response.sendError(401))
             )
             .oauth2Login(oauth2 -> oauth2
                 .userInfoEndpoint(userInfo -> userInfo
