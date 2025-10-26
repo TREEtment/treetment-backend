@@ -1,6 +1,6 @@
 package com.treetment.backend.user.service;
 
-import com.treetment.backend.user.dto.UpdateProfileRequest;
+import com.treetment.backend.user.dto.UpdateNicknameRequest;
 import com.treetment.backend.user.dto.UserResponse;
 import com.treetment.backend.user.entity.User;
 import com.treetment.backend.user.repository.UserRepository;
@@ -26,7 +26,7 @@ public class UserService {
     }
 
     @Transactional
-    public UserResponse updateProfile(Integer userId, UpdateProfileRequest request) {
+    public UserResponse updateNickname(Integer userId, UpdateNicknameRequest request) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
 
@@ -36,10 +36,10 @@ public class UserService {
             throw new RuntimeException("이미 사용 중인 닉네임입니다.");
         }
 
-        user.updateProfile(request.getNickname(), request.getName());
+        user.updateNickname(request.getNickname());
         User savedUser = userRepository.save(user);
 
-        log.info("User profile updated: {}", savedUser.getEmail());
+        log.info("User nickname updated: {}", savedUser.getEmail());
         return UserResponse.from(savedUser);
     }
 

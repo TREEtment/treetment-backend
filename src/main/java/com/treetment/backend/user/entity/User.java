@@ -82,6 +82,10 @@ public class User extends Core {
         this.name = name;
     }
 
+    public void updateNickname(String nickname) {
+        this.nickname = nickname;
+    }
+
     public void updateProfileImage(String profileImageUrl) {
         this.profileImageUrl = profileImageUrl;
     }
