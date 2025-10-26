@@ -22,6 +22,22 @@ spring:
         format_sql: true
         dialect: org.hibernate.dialect.MySQLDialect
 
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: "ENC(GloiIVBPE4wJBAP1W5aKLENDsRNqWteNlqMYS1CLVyh0cS0+LRClOhB0vGiz2TF3/Dn5MPJ7Q+XyPVrgvS+CGg==)"  # 실제 암호화된 값으로 변경 필요
+    password: "ENC(uV8bH41Me3imr/YpCmqOZTZ6gfoQr5MEiV6ZN72mIJUAcBmydBeS+oNcuz8CKP27Qtc4bPXK75SYYyNRGHL4mQ==)"   # 실제 암호화된 값으로 변경 필요
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+          connectiontimeout: 5000
+          timeout: 5000
+          writetimeout: 5000
+
 jasypt:
   encryptor:
     algorithm: PBEWITHSHA256AND256BITAES-CBC-BC
@@ -45,6 +61,10 @@ openai:
 ai:
   server:
     url: "ENC(Zjlau059N1SSguQZDKzZGCA/KGT8eaVpHwWeJIsOj9dfd6rDszv8fGZ+rc8Ox2R22s9yg71pXpBsit7ih21v9A==)"
+
+blender:
+  server:
+    url: "ENC(sHyKBP3rOgDDSeed4qZhcIZZgptJ8xgIPZKWG3GuvsZda8JSNEsrWSCGB9bVE3jEDAL2oq/a4JjtAexWhlDHyA==)"
 
 papago:
   api:
