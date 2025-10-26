@@ -1,7 +1,8 @@
 package com.treetment.backend.user.controller;
 
 import com.treetment.backend.global.dto.response.ApiResponse;
-import com.treetment.backend.user.dto.UpdateProfileRequest;
+import com.treetment.backend.security.principle.CustomPrincipal;
+import com.treetment.backend.user.dto.UpdateNicknameRequest;
 import com.treetment.backend.user.dto.UserResponse;
 import com.treetment.backend.user.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -9,7 +10,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -24,28 +25,29 @@ public class UserController {
 
     @GetMapping("/profile")
     @Operation(summary = "프로필 조회", description = "현재 사용자의 프로필 정보를 조회합니다.")
-    public ResponseEntity<ApiResponse<UserResponse>> getProfile(Authentication authentication) {
-        Integer userId = Integer.valueOf(authentication.getName());
+    public ResponseEntity<ApiResponse<UserResponse>> getProfile(
+            @AuthenticationPrincipal CustomPrincipal principal) {
+        Integer userId = principal.getUser().getId();
         UserResponse userResponse = userService.getUserProfile(userId);
         return ResponseEntity.ok(ApiResponse.success("프로필 조회 성공", userResponse));
     }
 
-    @PutMapping("/profile")
-    @Operation(summary = "프로필 수정", description = "사용자의 닉네임과 이름을 수정합니다.")
-    public ResponseEntity<ApiResponse<UserResponse>> updateProfile(
-            Authentication authentication,
-            @RequestBody UpdateProfileRequest request) {
-        Integer userId = Integer.valueOf(authentication.getName());
-        UserResponse userResponse = userService.updateProfile(userId, request);
-        return ResponseEntity.ok(ApiResponse.success("프로필 수정 성공", userResponse));
+    @PutMapping("/nickname")
+    @Operation(summary = "닉네임 수정", description = "사용자의 닉네임을 수정합니다.")
+    public ResponseEntity<ApiResponse<UserResponse>> updateNickname(
+            @AuthenticationPrincipal CustomPrincipal principal,
+            @RequestBody UpdateNicknameRequest request) {
+        Integer userId = principal.getUser().getId();
+        UserResponse userResponse = userService.updateNickname(userId, request);
+        return ResponseEntity.ok(ApiResponse.success("닉네임 수정 성공", userResponse));
     }
 
     @PostMapping("/profile/image")
     @Operation(summary = "프로필 이미지 업로드", description = "사용자의 프로필 이미지를 업로드합니다.")
     public ResponseEntity<ApiResponse<UserResponse>> updateProfileImage(
-            Authentication authentication,
+            @AuthenticationPrincipal CustomPrincipal principal,
             @RequestParam("file") MultipartFile imageFile) {
-        Integer userId = Integer.valueOf(authentication.getName());
+        Integer userId = principal.getUser().getId();
         UserResponse userResponse = userService.updateProfileImage(userId, imageFile);
         return ResponseEntity.ok(ApiResponse.success("프로필 이미지 업데이트 성공", userResponse));
     }
