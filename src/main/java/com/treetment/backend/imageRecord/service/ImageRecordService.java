@@ -12,6 +12,7 @@ import com.treetment.backend.user.entity.User;
 import com.treetment.backend.user.repository.UserRepository; // 공용 UserRepository 사용
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +22,7 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ImageRecordService {
@@ -117,7 +119,7 @@ public class ImageRecordService {
         try {
             return objectMapper.writeValueAsString(data);
         } catch (JsonProcessingException e) {
-            System.err.println("JSON 변환 실패: " + e.getMessage());
+            log.error("JSON 변환 실패: {}", e.getMessage());
             return "{}";
         }
     }
