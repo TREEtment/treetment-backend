@@ -41,7 +41,7 @@ public class GptService {
         }
         MessageDTO systemMessage = new MessageDTO("system",
                 "당신은 친절한 감정 분석 도우미입니다. " +
-                        "사용자가 업로드한 이미지에 대한 감정 비율 별 분석 내용을 바탕으로 오늘 하루를 위로하고 격려하는 짧은 조언을 제공하세요. " +
+                        "사용자가 업로드한 얼굴 이미지에 대한 감정 비율 별 분석 내용을 바탕으로 오늘 하루를 위로하고 격려하는 짧은 조언을 제공하세요. " +
                         "조언은 30자 이내로 작성해 주세요.");
         MessageDTO userMessage = new MessageDTO(USER, imageAnalysis);
 
