@@ -6,6 +6,7 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import com.treetment.backend.Emotiontree.BlenderService;
 import java.util.Map;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -19,6 +20,7 @@ public class EmotionRecordService {
     private final CustomAiService customAiService;
     private final GptService gptService;
     private final PapagoService papagoService;
+    private final BlenderService blenderService;
 
     @Transactional
     public EmotionRecordDetailDTO createRecord(Integer userId, EmotionRecordCreateRequestDTO requestDTO) {
@@ -52,6 +54,9 @@ public class EmotionRecordService {
                     .build();
         }
         EmotionRecord savedRecord = emotionRecordRepository2.save(recordToSave);
+        if (savedRecord.getEmotionScore() != null) {
+            blenderService.requestTreeGrowth(savedRecord.getEmotionScore(), savedRecord.getUser().getId());
+        }
         return new EmotionRecordDetailDTO(savedRecord);
     }
 

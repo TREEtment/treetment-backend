@@ -12,7 +12,7 @@ import java.util.List;
 public class EmotiontreeController {
     private final EmotiontreeService emotiontreeService;
     @GetMapping("/user/{userId}")
-    public ResponseEntity<List<EmotiontreeDTO>> getTreesByUserId(@PathVariable Long userId) {
+    public ResponseEntity<List<EmotiontreeDTO>> getTreesByUserId(@PathVariable Integer userId) {
         List<EmotiontreeDTO> trees = emotiontreeService.getTreesByUserId(userId);
         return ResponseEntity.ok(trees);
     }
