@@ -1,5 +1,5 @@
 package com.treetment.backend.emotionTree.dto;
-import com.treetment.backend.emotionTree.XXX.entity.EmotionTree;
+import com.treetment.backend.emotionTree.entity.EmotionTree;
 import lombok.Getter;
 import java.time.LocalDateTime;
 
