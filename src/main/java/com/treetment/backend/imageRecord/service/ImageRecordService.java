@@ -7,7 +7,7 @@ import com.treetment.backend.imageRecord.dto.ImageRecordCreateRequestDTO;
 import com.treetment.backend.imageRecord.dto.ImageRecordDetailDTO;
 import com.treetment.backend.imageRecord.repository.ImageRecordRepository;
 import com.treetment.backend.emotionRecord.entity.EmotionRecord;
-import com.treetment.backend.emotionRecord.service.GptService;
+import com.treetment.backend.imageRecord.service.GptService;
 import com.treetment.backend.user.entity.User;
 import com.treetment.backend.user.repository.UserRepository; // 공용 UserRepository 사용
 import jakarta.persistence.EntityNotFoundException;
@@ -19,6 +19,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -30,7 +31,7 @@ public class ImageRecordService {
     private final ObjectMapper objectMapper;
 
     // AI 분석 응답을 담기 위한 내부 DTO
-    private record AiAnalysisResponse(String dominantEmotion, Map<String, Float> allEmotions) {}
+    private record AiAnalysisResponse(Map<String, Float> allEmotions) {}
 
     @Transactional
     public ImageRecordDetailDTO createImageRecord(Long userId, ImageRecordCreateRequestDTO requestDTO) {
@@ -38,7 +39,8 @@ public class ImageRecordService {
         findTodayRecord(userId).ifPresent(record -> {
             // 기록이 이미 존재하면, 예외를 발생
             throw new IllegalStateException(
-                    "이미 오늘 감정 기록을 작성했습니다. 기록은 하루에 한 번만 가능합니다.");
+                    "이미 오늘 감정 기록을 작성했습니다. " +
+                            "기록은 하루에 한 번만 가능합니다.");
         });
 
         User user = findUserById(userId); // 사용자 조회
@@ -50,7 +52,7 @@ public class ImageRecordService {
         float finalScore = calculateWeightScore(analysisResponse.allEmotions());
 
         // GPT 한 줄 답변 생성
-        String gptAnswer = getGptAdviceForEmotion(analysisResponse.dominantEmotion());
+        String gptAnswer = getGptAdviceFromEmotions(analysisResponse.allEmotions());
 
         // 모든 감정 데이터를 JSON 문자열로 반환
         String allEmotionsJson = convertMapToJson(analysisResponse.allEmotions());
@@ -58,7 +60,7 @@ public class ImageRecordService {
         // 새로운 기록 생성
         EmotionRecord newRecord = EmotionRecord.builder()
                 .user(user)
-                .emotionTitle(analysisResponse.dominantEmotion()) // 대표 감정으로 설정
+                .emotionTitle("오늘의 표정 기록")
                 .emotionContent(allEmotionsJson) // 모든 감정 데이터를 JSON 문자열로 저장
                 .emotionScore(finalScore) // 가중치로 계산된 최종 점수 저장
                 .emotionImage(requestDTO.getEmotionImage())
@@ -88,12 +90,7 @@ public class ImageRecordService {
             throw new RuntimeException(
                     "AI 서버로부터 감정 분석 결과를 받지 못했습니다.");
         }
-
-        String dominantEmotion = aiResponseMap.entrySet().stream()
-                .max(Map.Entry.comparingByValue())
-                .map(Map.Entry::getKey)
-                .orElse("Unknown");
-        return new AiAnalysisResponse(dominantEmotion, aiResponseMap);
+        return new AiAnalysisResponse(aiResponseMap);
     }
 
     private float calculateWeightScore(Map<String, Float> emotions) {
@@ -101,10 +98,10 @@ public class ImageRecordService {
         Map<String, Float> weights = Map.of(
                 "happy", 1.0f,
                 "sad", -1.0f,
-                "angry", -0.8f,
-                "surprise", 0.5f,
+                "angry", -0.75f,
+                "surprise", 0.3f,
                 "fear", -0.5f,
-                "disgust", -0.7f,
+                "disgust", -0.3f,
                 "neutral", 0.0f
         );
 
@@ -123,14 +120,18 @@ public class ImageRecordService {
             System.err.println("JSON 변환 실패: " + e.getMessage());
             return "{}";
         }
-        }
+    }
 
-    private String getGptAdviceForEmotion(String detectedEmotion) {
-        String prompt = String.format(
-                "사용자가 업로드한 이미지에서 감지된 주된 감정은 '%s'입니다. " +
-                        "이 감정을 바탕으로 따뜻한 위로와 격려의 메시지를 한 문장으로 작성해 주세요.",
-                 detectedEmotion
-        );
-        return gptService.getGptAdvice(prompt);
+    private String getGptAdviceFromEmotions(Map<String, Float> allEmotions) {
+        StringBuilder analysisBuilder = new StringBuilder();
+        String emotionsAnalysis = allEmotions.entrySet().stream()
+                .map(entry -> String.format("%s: %.2f%%",
+                        entry.getKey(), entry.getValue() * 100))
+                .collect(Collectors.joining(", "));
+
+        analysisBuilder.append("이미지에서 감지된 감정 비율은 다음과 같습니다: ")
+                .append(emotionsAnalysis);
+
+        return gptService.getGptAdvice(analysisBuilder.toString());
     }
 }
