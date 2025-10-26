@@ -63,4 +63,15 @@ public class UserService {
     public boolean checkNicknameAvailability(String nickname) {
         return !userRepository.existsByNickname(nickname);
     }
+
+    @Transactional
+    public void deleteUser(Integer userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+
+        // Hard delete - 연관된 데이터들도 함께 삭제됨 (cascade 설정에 따라)
+        userRepository.delete(user);
+
+        log.info("User deleted: {}", user.getEmail());
+    }
 }
