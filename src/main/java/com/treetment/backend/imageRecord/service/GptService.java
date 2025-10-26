@@ -16,7 +16,7 @@ import org.springframework.http.MediaType;
 import java.util.List;
 
 @Slf4j
-@Service
+@Service("imageGptService")
 @RequiredArgsConstructor
 public class GptService {
     private final RestTemplate restTemplate;
