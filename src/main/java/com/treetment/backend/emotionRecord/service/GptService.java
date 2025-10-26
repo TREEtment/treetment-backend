@@ -13,7 +13,7 @@ import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
 
-@Service
+@Service("emotionGptService")
 @RequiredArgsConstructor
 public class GptService {
     private final RestTemplate restTemplate;
