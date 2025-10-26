@@ -1,5 +1,5 @@
 package com.treetment.backend.emotionTree.dto;
-import com.treetment.backend.emotionTree.entity.EmotionTree;
+import com.treetment.backend.emotionTree.XXX.entity.EmotionTree;
 import lombok.Getter;
 import java.time.LocalDateTime;
 
@@ -15,6 +15,6 @@ public class EmotiontreeDTO {
         this.treeId=emotionTree.getId();
         this.userId=emotionTree.getUser().getId();
         this.emotionTreeImage = emotionTree.getEmotionTreeImage();
-        this.createdAt = emotionTree.getCreateUpdateAt() != null ? emotionTree.getCreateUpdateAt().getCreatedAt() : null;
+        this.createdAt = emotionTree.getCreatedAt();
     }
 }
