@@ -60,4 +60,13 @@ public class UserController {
             available ? "사용 가능한 닉네임입니다" : "이미 사용 중인 닉네임입니다", 
             available));
     }
+
+    @DeleteMapping
+    @Operation(summary = "회원 탈퇴", description = "사용자 계정을 완전히 삭제합니다.")
+    public ResponseEntity<ApiResponse<Void>> deleteAccount(
+            @AuthenticationPrincipal CustomPrincipal principal) {
+        Integer userId = principal.getUser().getId();
+        userService.deleteUser(userId);
+        return ResponseEntity.ok(ApiResponse.success("회원 탈퇴가 완료되었습니다", null));
+    }
 }
