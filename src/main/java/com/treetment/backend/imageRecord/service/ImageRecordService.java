@@ -7,7 +7,6 @@ import com.treetment.backend.imageRecord.dto.ImageRecordCreateRequestDTO;
 import com.treetment.backend.imageRecord.dto.ImageRecordDetailDTO;
 import com.treetment.backend.imageRecord.repository.ImageRecordRepository;
 import com.treetment.backend.emotionRecord.entity.EmotionRecord;
-import com.treetment.backend.imageRecord.service.GptService;
 import com.treetment.backend.user.entity.User;
 import com.treetment.backend.user.repository.UserRepository; // 공용 UserRepository 사용
 import jakarta.persistence.EntityNotFoundException;
