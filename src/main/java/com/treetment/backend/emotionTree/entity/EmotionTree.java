@@ -26,9 +26,19 @@ public class EmotionTree {
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
+
+    // 추가: 단순 조회/전달 편의를 위한 userId 필드 (동일 컬럼 매핑, 읽기 전용)
+    @Column(name = "user_id", insertable = false, updatable = false)
+    private Integer userId;
     
     @Column(name = "emotion_tree_image")
     private String emotionTreeImage;
+
+    @Column(name = "render_status")
+    private String renderStatus; // "rendering", "done", "failed"
+
+    @Column(name = "image_url")
+    private String imageUrl;
 
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
@@ -40,5 +50,34 @@ public class EmotionTree {
 
     public void updateImage(String emotionTreeImage) {
         this.emotionTreeImage = emotionTreeImage;
+    }
+
+    public void updateRenderStatus(String renderStatus) {
+        this.renderStatus = renderStatus;
+    }
+
+    public void updateImageUrl(String imageUrl) {
+        this.imageUrl = imageUrl;
+    }
+
+    public void completeRender(String imageUrl) {
+        this.renderStatus = "done";
+        this.imageUrl = imageUrl;
+    }
+
+    public void markRendering() {
+        this.renderStatus = "rendering";
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    public void markDone(String imageUrl) {
+        this.renderStatus = "done";
+        this.imageUrl = imageUrl;
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    public void markFailed() {
+        this.renderStatus = "failed";
+        this.updatedAt = LocalDateTime.now();
     }
 }

@@ -31,16 +31,24 @@ public class BlenderService {
     private String bucket;
     private final String DEFAULT_JSON_PATH = "defaults/emotion_tree_data.json";
 
+    /**
+     * 기존 동기 트리 성장 요청 메서드 - 비동기 방식으로 변경됨
+     * 이제 GPU 워커가 별도로 처리하므로 사용하지 않음
+     * 
+     * @deprecated 비동기 렌더 파이프라인으로 대체됨
+     */
+    @Deprecated
     @Transactional
     public void requestTreeGrowth(float score, Integer userId) {
-
+        // 기존 동기 호출 코드 - 비동기 방식으로 변경됨
+        // TODO: GPU 워커가 별도로 처리하도록 변경됨
+        
+        /*
         boolean treeExists = emotiontreeRepository.findByUser_Id(userId).isPresent();
-
 
         if (!treeExists) {
             createInitialTreeResources(userId);
         }
-
 
         GrowthRequestDto requestDto = new GrowthRequestDto(score, String.valueOf(userId));
         String url = blenderServerUrl + "/grow-tree";
@@ -50,6 +58,9 @@ public class BlenderService {
         } catch (RestClientException e) {
             System.err.println("FastAPI request failed: " + e.getMessage());
         }
+        */
+        
+        System.out.println("requestTreeGrowth 메서드가 호출되었지만 비동기 방식으로 변경되어 실제 처리는 GPU 워커가 담당합니다.");
     }
 
 
