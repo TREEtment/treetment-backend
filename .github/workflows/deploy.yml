@@ -35,6 +35,7 @@ jobs:
           mkdir -p out/bundle
           cp -v app.jar out/bundle/
           cp -v Dockerfile docker-compose.yml out/bundle/
+          cp -v worker.sh out/bundle/
           tar -czf out/app.tar.gz -C out/bundle .
           ls -lh out/app.tar.gz
 
@@ -74,13 +75,17 @@ jobs:
           # (선택) 항상 prod 프로필/서울 TZ 고정하고 싶다면 여기도 추가 가능
           SPRING_PROFILES_ACTIVE: prod
           TZ: Asia/Seoul
+          AWS_ACCESS_KEY_ID: ${{ secrets.GPU_AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.GPU_AWS_SECRET_ACCESS_KEY }}
+          AWS_DEFAULT_REGION: ap-northeast-2
+          INTERNAL_SECRET: ${{ secrets.INTERNAL_SECRET }}
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           command_timeout: 30m
           # ★ 이 줄이 '원격'으로 넘기는 키: 여기 나열 안 하면 원격 쉘에서 못 씀
-          envs: JASYPT_ENCRYPTOR_PASSWORD,SPRING_PROFILES_ACTIVE,TZ
+          envs: JASYPT_ENCRYPTOR_PASSWORD,SPRING_PROFILES_ACTIVE,TZ,AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY,AWS_DEFAULT_REGION,INTERNAL_SECRET
           script: |
             set -Eeuo pipefail
 
@@ -110,7 +115,7 @@ jobs:
             if docker compose version >/dev/null 2>&1; then
               DOCKER_COMPOSE="docker compose"
             else
-              command -v docker-compose >/div/null 2>&1 || sudo apt-get install -y docker-compose
+              command -v docker-compose >/dev/null 2>&1 || sudo apt-get install -y docker-compose
               DOCKER_COMPOSE="docker-compose"
             fi
 
@@ -138,6 +143,10 @@ jobs:
               # (선택) 함께 고정하고 싶으면 여기도 기록
               echo "SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-prod}"
               echo "TZ=${TZ:-Asia/Seoul}"
+              echo "AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}"
+              echo "AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}"
+              echo "AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-ap-northeast-2}"
+              echo "INTERNAL_SECRET=${INTERNAL_SECRET}"
             } > "$APP_HOME/.env"
             chmod 600 "$APP_HOME/.env"
 
