@@ -9,7 +9,7 @@ import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.treetment.backend.emotionTree.service.BlenderService;
+import com.treetment.backend.emotionTree.service.EmotiontreeService;
 import java.util.Map;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -23,7 +23,7 @@ public class EmotionRecordService {
     private final CustomAiService customAiService;
     private final GptService gptService;
     private final PapagoService papagoService;
-    private final BlenderService blenderService;
+    private final EmotiontreeService emotiontreeService;
 
     @Transactional
     public EmotionRecordDetailDTO createRecord(Integer userId, EmotionRecordCreateRequestDTO requestDTO) {
@@ -57,10 +57,69 @@ public class EmotionRecordService {
                     .build();
         }
         EmotionRecord savedRecord = emotionRecordRepository2.save(recordToSave);
-        if (savedRecord.getEmotionScore() != null) {
-            blenderService.requestTreeGrowth(savedRecord.getEmotionScore(), savedRecord.getUser().getId());
-        }
+        
+        // 기존 동기 렌더 호출 제거 - 이제 비동기 방식으로 처리
+        // TODO: GPU 워커가 별도로 처리하도록 변경됨
+        // if (savedRecord.getEmotionScore() != null) {
+        //     blenderService.requestTreeGrowth(savedRecord.getEmotionScore(), savedRecord.getUser().getId());
+        // }
+        
         return new EmotionRecordDetailDTO(savedRecord);
+    }
+
+    public record TreeInitResult(Long treeId, Double score) {}
+
+    /**
+     * 감정 기록 저장 + EmotionTree 대기 생성 후 treeId와 score 반환 (내부용)
+     */
+    @Transactional
+    public TreeInitResult createRecordAndPendingTree(Integer userId, EmotionRecordCreateRequestDTO requestDTO) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new EntityNotFoundException("사용자를 찾을 수 없습니다: " + userId));
+        
+        String originalContent = requestDTO.getEmotionContent();
+        String translatedContent = papagoService.translateToEnglish(originalContent);
+
+        Map<String, String> emotionProbabilities = customAiService.predictEmotion(translatedContent);
+        float emotionScore = calculateWeightedScore(emotionProbabilities);
+        String gptAnswer = gptService.getGptAdvice(requestDTO.getEmotionContent());
+
+        LocalDate today = LocalDate.now();
+        LocalDateTime startOfDay = today.atStartOfDay();
+        LocalDateTime endOfDay = today.atTime(23, 59, 59);
+
+        Optional<EmotionRecord> existingRecordOpt = emotionRecordRepository2
+                .findTopByUser_IdAndCreatedAtBetweenOrderByCreatedAtDesc(userId, startOfDay, endOfDay);
+        EmotionRecord recordToSave;
+        if (existingRecordOpt.isPresent()) {
+            recordToSave = existingRecordOpt.get();
+            recordToSave.update(requestDTO.getEmotionTitle(), originalContent, emotionScore, gptAnswer);
+        }
+        else {
+            recordToSave = EmotionRecord.builder()
+                    .user(user)
+                    .emotionTitle(requestDTO.getEmotionTitle())
+                    .emotionContent(originalContent)
+                    .emotionScore(emotionScore)
+                    .gptAnswer(gptAnswer)
+                    .build();
+        }
+        EmotionRecord savedRecord = emotionRecordRepository2.save(recordToSave);
+        
+        // EmotionTree 대기 생성
+        com.treetment.backend.emotionTree.dto.TreeRenderResponseDTO treeRenderResponse =
+                emotiontreeService.createPendingTree(savedRecord.getUser().getId(), savedRecord.getEmotionScore());
+
+        return new TreeInitResult(treeRenderResponse.getTreeId(), Double.valueOf(savedRecord.getEmotionScore())) ;
+    }
+
+    /**
+     * 비동기 트리 렌더링을 위한 감정 기록 생성 (API 응답용)
+     */
+    @Transactional
+    public com.treetment.backend.emotionTree.dto.TreeRenderResponseDTO createRecordWithAsyncTreeRender(Integer userId, EmotionRecordCreateRequestDTO requestDTO) {
+        TreeInitResult result = createRecordAndPendingTree(userId, requestDTO);
+        return new com.treetment.backend.emotionTree.dto.TreeRenderResponseDTO(result.treeId(), "rendering");
     }
 
     private float calculateWeightedScore(Map<String, String> probabilities) {
