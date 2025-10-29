@@ -16,7 +16,7 @@ SCORE="$3"
 
 # 고정 설정 (필요하면 .env로 뺄 수 있음)
 AWS_REGION="ap-northeast-2"                      # GPU 리전 (현재 서울로 맞춘 상태)
-AMI_ID="ami-0f8c3fcf70ac1ae95"                   # Blender 미리 세팅된 AMI
+AMI_ID="ami-0908661c936d6afc9"                   # Blender 미리 세팅된 AMI
 INSTANCE_TYPE="g4dn.xlarge"                      # GPU 타입
 KEY_NAME="treetment-blender-server-key-pair"     # 계정 B의 EC2 키 페어 이름
 SECURITY_GROUP_ID="sg-0d3cdd04c8b6b09e7"         # 계정 B SG (9000 허용된 애)
