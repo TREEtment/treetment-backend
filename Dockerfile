@@ -1,6 +1,6 @@
 # syntax=docker/dockerfile:1.6
 
-FROM eclipse-temurin:21-jre   # <- alpine 버전 말고 일반 jre 이미지 (Debian 기반)
+FROM eclipse-temurin:21-jre
 
 WORKDIR /app
 
