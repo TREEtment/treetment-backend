@@ -14,8 +14,13 @@ need jq
 export AWS_DEFAULT_REGION="$AWS_REGION"
 export AWS_PAGER=""
 
-# 내부 콜백용 시크릿
+# 내부 콜백용 시크릿 (tree.py에서 사용)
 : "${INTERNAL_SECRET:=super-secret-token}"
+export INTERNAL_SECRET
+
+# 백엔드 URL (tree.py에서 사용)
+: "${BACKEND_URL:=http://localhost:8080}"
+export BACKEND_URL
 
 ########################################
 # 1) 인자 파싱
@@ -39,9 +44,6 @@ SCORE="$3"
 : "${SECURITY_GROUP_ID:=sg-0d3cdd04c8b6b09e7}"
 : "${SUBNET_ID:=subnet-06ad0e5f8e3610975}"
 
-# 백엔드(컨테이너 내부에서 접근)
-: "${BACKEND_LOCAL_URL:=http://localhost:8080}"
-
 # 타임아웃/재시도 설정
 : "${READY_MAX_TRIES:=30}"          # blender-api 준비 대기(최대 30회 x 3초 = ~90s)
 : "${READY_SLEEP_SEC:=3}"
@@ -53,6 +55,7 @@ echo "[worker] ===== Start render job ====="
 echo "[worker] treeId=$TREE_ID userId=$USER_ID score=$SCORE"
 echo "[worker] REGION=$AWS_REGION AMI_ID=$AMI_ID TYPE=$INSTANCE_TYPE"
 echo "[worker] INTERNAL_SECRET set? $([ -n "$INTERNAL_SECRET" ] && echo yes || echo no)"
+echo "[worker] BACKEND_URL=$BACKEND_URL"
 
 ########################################
 # 3) 종료 트랩 (항상 인스턴스 정리)
@@ -119,6 +122,7 @@ fi
 
 ########################################
 # 6) grow-tree 호출 (지수 백오프 재시도)
+#    중요: BACKEND_URL과 INTERNAL_SECRET을 환경변수로 전달
 ########################################
 call_grow() {
   curl -sS -X POST "http://$PUBLIC_IP:9000/grow-tree" \
@@ -174,28 +178,19 @@ fi
 echo "[worker] Parsed: returncode=${RETURNCODE:-<empty>} model_url=${MODEL_URL:-<empty>}"
 
 ########################################
-# 8) 내부 콜백 (/api/trees/internal/complete)
-#    백엔드 DTO 사양: { treeId, modelUrl, dataUrl? }
+# 8) 결과 확인
+#    중요: complete 콜백은 이미 tree.py에서 호출되었음!
 ########################################
 if [ "${RETURNCODE:-1}" = "0" ] && [ -n "${MODEL_URL:-}" ] && [ "${MODEL_URL:-null}" != "null" ]; then
-  echo "[worker] Rendering succeeded. Sending completion callback..."
-  if [ -n "${DATA_URL:-}" ] && [ "${DATA_URL}" != "null" ]; then
-    CALLBACK_BODY=$(jq -n --arg tid "$TREE_ID" --arg model "$MODEL_URL" --arg data "$DATA_URL" \
-      '{treeId: ($tid|tonumber), modelUrl: $model, dataUrl: $data}')
-  else
-    CALLBACK_BODY=$(jq -n --arg tid "$TREE_ID" --arg model "$MODEL_URL" \
-      '{treeId: ($tid|tonumber), modelUrl: $model}')
-  fi
-
-  CALLBACK_RESP="$(curl -sS -X POST "$BACKEND_LOCAL_URL/api/trees/internal/complete" \
-    -H "Content-Type: application/json" \
-    -H "X-Internal-Token: $INTERNAL_SECRET" \
-    -d "$CALLBACK_BODY")"
-
-  echo "[worker] Callback response:"
-  echo "$CALLBACK_RESP"
+  echo "[worker] ===== Rendering SUCCEEDED ====="
+  echo "[worker] Model URL: $MODEL_URL"
+  echo "[worker] Data URL: ${DATA_URL:-<empty>}"
+  echo "[worker]"
+  echo "[worker] NOTE: Complete callback was already sent by tree.py during S3 upload!"
+  echo "[worker] No need to call /api/trees/internal/complete from worker.sh"
 else
-  echo "[worker] Render failed or model_url missing. Skip success callback."
+  echo "[worker] ===== Rendering FAILED ====="
+  echo "[worker] Render failed or model_url missing."
   echo "[worker] (Optional) add a fail-callback endpoint to markFailed() if needed."
 fi
 
