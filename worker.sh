@@ -1,10 +1,25 @@
 #!/bin/bash
-set -euo pipefail
+set -Eeuo pipefail
 
 ########################################
-# 0. 인자 / 설정
+# 0) 필수 도구 / 환경 점검
 ########################################
+need() { command -v "$1" >/dev/null 2>&1 || { echo "[worker] FATAL: '$1' not found"; exit 127; }; }
+need aws
+need curl
+need jq
 
+# AWS 리전 (필수). 컨테이너/호스트에 설정되어 있지 않으면 이 값 사용
+: "${AWS_REGION:=ap-northeast-2}"
+export AWS_DEFAULT_REGION="$AWS_REGION"
+export AWS_PAGER=""
+
+# 내부 콜백용 시크릿
+: "${INTERNAL_SECRET:=super-secret-token}"
+
+########################################
+# 1) 인자 파싱
+########################################
 if [ "$#" -ne 3 ]; then
   echo "usage: worker.sh <TREE_ID> <USER_ID> <SCORE>"
   exit 1
@@ -14,57 +29,50 @@ TREE_ID="$1"
 USER_ID="$2"
 SCORE="$3"
 
-# 고정 설정 (필요하면 .env로 뺄 수 있음)
-AWS_REGION="ap-northeast-2"                      # GPU 리전 (현재 서울로 맞춘 상태)
-AMI_ID="ami-06b628dbe39a5b5b9"                   # Blender 미리 세팅된 AMI
-INSTANCE_TYPE="g4dn.xlarge"                      # GPU 타입
-KEY_NAME="treetment-blender-server-key-pair"     # 계정 B의 EC2 키 페어 이름
-SECURITY_GROUP_ID="sg-0d3cdd04c8b6b09e7"         # 계정 B SG (9000 허용된 애)
-SUBNET_ID="subnet-06ad0e5f8e3610975"             # 퍼블릭 서브넷 (퍼블릭 IP 붙는 곳)
+########################################
+# 2) 런타임 설정 (필요 시 .env로 분리 가능)
+########################################
+# GPU 측(계정 B)의 리소스
+: "${AMI_ID:=ami-06b628dbe39a5b5b9}"          # 최신으로 교체해두기
+: "${INSTANCE_TYPE:=g4dn.xlarge}"
+: "${KEY_NAME:=treetment-blender-server-key-pair}"
+: "${SECURITY_GROUP_ID:=sg-0d3cdd04c8b6b09e7}"
+: "${SUBNET_ID:=subnet-06ad0e5f8e3610975}"
 
-# 백엔드 접근 URL
-# 이 스크립트는 backend 컨테이너 안에서 실행되니까 컨테이너 내부 포트 8080이 맞음
-BACKEND_LOCAL_URL="http://localhost:8080"
+# 백엔드(컨테이너 내부에서 접근)
+: "${BACKEND_LOCAL_URL:=http://localhost:8080}"
 
-# 내부 인증 토큰 (백엔드 /api/trees/internal/complete 헤더 검증용)
-INTERNAL_SECRET="${INTERNAL_SECRET:-super-secret-token}"
+# 타임아웃/재시도 설정
+: "${READY_MAX_TRIES:=30}"          # blender-api 준비 대기(최대 30회 x 3초 = ~90s)
+: "${READY_SLEEP_SEC:=3}"
+: "${GROWTREE_TIMEOUT_SEC:=180}"    # grow-tree 호출 타임아웃(초)
+: "${GROWTREE_RETRIES:=3}"          # 실패시 재시도 횟수
+: "${GROWTREE_BACKOFF_BASE:=2}"     # 지수 백오프 배수
 
 echo "[worker] ===== Start render job ====="
 echo "[worker] treeId=$TREE_ID userId=$USER_ID score=$SCORE"
 echo "[worker] REGION=$AWS_REGION AMI_ID=$AMI_ID TYPE=$INSTANCE_TYPE"
-echo "[worker] USING INTERNAL_SECRET? $( [ -n "$INTERNAL_SECRET" ] && echo yes || echo no )"
+echo "[worker] INTERNAL_SECRET set? $([ -n "$INTERNAL_SECRET" ] && echo yes || echo no)"
 
 ########################################
-# 1. cleanup 트랩 (무조건 GPU 종료 보장)
+# 3) 종료 트랩 (항상 인스턴스 정리)
 ########################################
-
 INSTANCE_ID=""
 cleanup() {
   if [ -n "${INSTANCE_ID:-}" ]; then
-    echo "[worker] Cleaning up instance $INSTANCE_ID (terminate)"
-    aws ec2 terminate-instances \
-      --region "$AWS_REGION" \
-      --instance-ids "$INSTANCE_ID" >/dev/null 2>&1 || true
-
-    # 완전히 내려갈 때까지 대기 (굳이 기다리지 않아도 되지만 깔끔하게 마무리)
-    aws ec2 wait instance-terminated \
-      --region "$AWS_REGION" \
-      --instance-ids "$INSTANCE_ID" >/dev/null 2>&1 || true
+    echo "[worker] Terminating instance $INSTANCE_ID ..."
+    aws ec2 terminate-instances --instance-ids "$INSTANCE_ID" >/dev/null 2>&1 || true
+    aws ec2 wait instance-terminated --instance-ids "$INSTANCE_ID" >/dev/null 2>&1 || true
     echo "[worker] Instance $INSTANCE_ID terminated."
   fi
 }
 trap cleanup EXIT
 
 ########################################
-# 2. GPU 인스턴스 생성
+# 4) GPU 인스턴스 생성 & 실행 대기
 ########################################
-
 echo "[worker] Launching GPU instance..."
-
-# 인스턴스 만들면서 태그도 같이 넣는다.
-# Name / TreeId / UserId 붙여서 콘솔에서 추적 가능하게.
-INSTANCE_ID=$(aws ec2 run-instances \
-  --region "$AWS_REGION" \
+INSTANCE_ID="$(aws ec2 run-instances \
   --image-id "$AMI_ID" \
   --instance-type "$INSTANCE_TYPE" \
   --key-name "$KEY_NAME" \
@@ -73,97 +81,120 @@ INSTANCE_ID=$(aws ec2 run-instances \
   --associate-public-ip-address \
   --count 1 \
   --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=treetment-blender-worker},{Key=TreeId,Value=$TREE_ID},{Key=UserId,Value=$USER_ID}]" \
-  --query 'Instances[0].InstanceId' \
-  --output text)
+  --query 'Instances[0].InstanceId' --output text)"
 
 echo "[worker] Instance launched: $INSTANCE_ID"
 echo "[worker] Waiting until running..."
+aws ec2 wait instance-running --instance-ids "$INSTANCE_ID"
 
-aws ec2 wait instance-running \
-  --region "$AWS_REGION" \
-  --instance-ids "$INSTANCE_ID"
-
-echo "[worker] Instance is running. Fetching public IP..."
-
-PUBLIC_IP=$(aws ec2 describe-instances \
-  --region "$AWS_REGION" \
+PUBLIC_IP="$(aws ec2 describe-instances \
   --instance-ids "$INSTANCE_ID" \
   --query 'Reservations[0].Instances[0].PublicIpAddress' \
-  --output text)
-
+  --output text)"
 if [ -z "$PUBLIC_IP" ] || [ "$PUBLIC_IP" = "None" ]; then
-  echo "[worker] ERROR: Failed to get public IP."
+  echo "[worker] ERROR: Could not obtain public IP"
   exit 1
 fi
-
-echo "[worker] Public IP acquired: $PUBLIC_IP"
+echo "[worker] Public IP: $PUBLIC_IP"
 
 ########################################
-# 3. blender-api 기동 대기 (최대 ~90초)
+# 5) blender-api 준비 대기
 ########################################
-
-echo "[worker] Waiting blender-api (on $PUBLIC_IP:9000)..."
-
+echo "[worker] Waiting blender-api readiness on $PUBLIC_IP:9000 ..."
 READY="false"
-for i in {1..30}; do
-  # /health 엔드포인트나 /docs 중 하나만 살아있으면 OK로 본다
-  if curl -s "http://$PUBLIC_IP:9000/health" >/dev/null 2>&1 || \
-     curl -s "http://$PUBLIC_IP:9000/docs" >/dev/null 2>&1; then
+for ((i=1;i<=READY_MAX_TRIES;i++)); do
+  if curl -s --max-time 3 "http://$PUBLIC_IP:9000/health" >/dev/null 2>&1 || \
+     curl -s --max-time 3 "http://$PUBLIC_IP:9000/docs"   >/dev/null 2>&1; then
     READY="true"
     echo "[worker] blender-api is ready (try #$i)"
     break
   fi
-  echo "[worker] blender-api not ready yet (try #$i), sleep..."
-  sleep 3
+  echo "[worker] not ready yet (try #$i) ... sleep $READY_SLEEP_SEC"
+  sleep "$READY_SLEEP_SEC"
 done
-
 if [ "$READY" != "true" ]; then
-  echo "[worker] ERROR: blender-api did not become ready in time."
-  # 여기서 exit하면 trap이 돌면서 EC2는 terminate된다.
+  echo "[worker] ERROR: blender-api did not become ready in time"
   exit 1
 fi
 
 ########################################
-# 4. 렌더 요청
+# 6) grow-tree 호출 (지수 백오프 재시도)
 ########################################
+call_grow() {
+  curl -sS -X POST "http://$PUBLIC_IP:9000/grow-tree" \
+    -H "Content-Type: application/json" \
+    --max-time "$GROWTREE_TIMEOUT_SEC" \
+    -d "{\"score\": ${SCORE}, \"userId\": \"${USER_ID}\", \"treeId\": ${TREE_ID}}"
+}
 
-echo "[worker] Calling grow-tree..."
-RESPONSE=$(curl -s -X POST "http://$PUBLIC_IP:9000/grow-tree" \
-  -H "Content-Type: application/json" \
-  -d "{\"score\": ${SCORE}, \"userId\": \"${USER_ID}\", \"treeId\": ${TREE_ID}}")
+RESPONSE=""
+attempt=0
+while :; do
+  attempt=$((attempt+1))
+  echo "[worker] Calling grow-tree (attempt $attempt/$GROWTREE_RETRIES) ..."
+  set +e
+  RESPONSE="$(call_grow)"
+  rc=$?
+  set -e
+
+  # 네트워크/타임아웃 에러
+  if [ $rc -ne 0 ]; then
+    echo "[worker] grow-tree request failed (rc=$rc)"
+  else
+    # 형식상 성공이면 break 시도 (JSON 파싱)
+    break
+  fi
+
+  if [ $attempt -ge "$GROWTREE_RETRIES" ]; then
+    echo "[worker] ERROR: grow-tree failed after $GROWTREE_RETRIES attempts"
+    RESPONSE=""  # 명확히 비움
+    break
+  fi
+  sleep_sec=$(( GROWTREE_BACKOFF_BASE ** attempt ))
+  echo "[worker] retry in ${sleep_sec}s ..."
+  sleep "$sleep_sec"
+done
 
 echo "[worker] Blender response raw:"
 echo "$RESPONSE"
 
-IMAGE_URL=$(echo "$RESPONSE"    | jq -r '.image_url')
-RETURNCODE=$(echo "$RESPONSE"   | jq -r '.returncode')
+########################################
+# 7) 응답 파싱 (model_url → imageUrl로 매핑)
+########################################
+# returncode, model_url(data_url는 필요시 활용)
+RETURNCODE="$(echo "$RESPONSE" | jq -r '.returncode // empty' 2>/dev/null || true)"
+MODEL_URL="$(echo "$RESPONSE"   | jq -r '.model_url  // .image_url // empty' 2>/dev/null || true)"
+DATA_URL="$(echo "$RESPONSE"    | jq -r '.data_url   // empty' 2>/dev/null || true)"
+
+# 일부 이미지가 stdout에서만 노출될 때 대비(FINAL_* 라인 파싱)
+if [ -z "$MODEL_URL" ] || [ "$MODEL_URL" = "null" ]; then
+  MODEL_URL="$(echo "$RESPONSE" | jq -r '.stdout // ""' | grep -Eo 'FINAL_MODEL_URL=.*' | head -n1 | sed 's/FINAL_MODEL_URL=//')"
+fi
+
+echo "[worker] Parsed: returncode=${RETURNCODE:-<empty>} model_url=${MODEL_URL:-<empty>}"
 
 ########################################
-# 5. 백엔드 콜백 (/api/trees/internal/complete)
+# 8) 내부 콜백 (/api/trees/internal/complete)
+#    백엔드 DTO와의 호환을 위해 imageUrl 키에 GLB URL을 넣어 전달
 ########################################
-
-if [ "$RETURNCODE" = "0" ] && [ -n "$IMAGE_URL" ] && [ "$IMAGE_URL" != "null" ]; then
+if [ "${RETURNCODE:-1}" = "0" ] && [ -n "${MODEL_URL:-}" ] && [ "${MODEL_URL:-null}" != "null" ]; then
   echo "[worker] Rendering succeeded. Sending completion callback..."
+  CALLBACK_BODY=$(jq -n --arg tid "$TREE_ID" --arg url "$MODEL_URL" \
+    '{treeId: ($tid|tonumber), imageUrl: $url}')
 
-  CALLBACK_BODY=$(cat <<EOF
-{"treeId": ${TREE_ID}, "imageUrl": "${IMAGE_URL}"}
-EOF
-)
-
-  CALLBACK_RESP=$(curl -s -X POST "$BACKEND_LOCAL_URL/api/trees/internal/complete" \
+  CALLBACK_RESP="$(curl -sS -X POST "$BACKEND_LOCAL_URL/api/trees/internal/complete" \
     -H "Content-Type: application/json" \
     -H "X-Internal-Token: $INTERNAL_SECRET" \
-    -d "$CALLBACK_BODY")
+    -d "$CALLBACK_BODY")"
 
   echo "[worker] Callback response:"
   echo "$CALLBACK_RESP"
 else
-  echo "[worker] Render failed or no image_url. Skipping success callback."
-  echo "[worker] TODO: we could POST /api/trees/internal/fail here to markFailed() if you add that endpoint."
+  echo "[worker] Render failed or model_url missing. Skip success callback."
+  echo "[worker] (Optional) add a fail-callback endpoint to markFailed() if needed."
 fi
 
 ########################################
-# 6. 끝
+# 9) 끝 (trap으로 인스턴스 정리)
 ########################################
-
-echo "[worker] Job finished for treeId=$TREE_ID. Instance will be terminated via trap."
+echo "[worker] Job finished for treeId=$TREE_ID"
