@@ -40,6 +40,12 @@ public class EmotionTree {
     @Column(name = "image_url")
     private String imageUrl;
 
+    @Column(name = "model_url")
+    private String modelUrl;
+
+    @Column(name = "data_url")
+    private String dataUrl;
+
     @CreatedDate
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
@@ -73,6 +79,13 @@ public class EmotionTree {
     public void markDone(String imageUrl) {
         this.renderStatus = "done";
         this.imageUrl = imageUrl;
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    public void markDoneWithModel(String modelUrl, String dataUrl) {
+        this.renderStatus = "done";
+        this.modelUrl = modelUrl;
+        this.dataUrl = dataUrl;
         this.updatedAt = LocalDateTime.now();
     }
 

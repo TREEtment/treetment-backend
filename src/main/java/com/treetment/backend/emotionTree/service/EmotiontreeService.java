@@ -72,7 +72,9 @@ public class EmotiontreeService {
         return new TreeStatusResponseDTO(
                 emotionTree.getId(),
                 emotionTree.getRenderStatus(),
-                emotionTree.getImageUrl()
+                emotionTree.getModelUrl(),
+                emotionTree.getDataUrl(),
+                emotionTree.getUpdatedAt() == null ? null : emotionTree.getUpdatedAt().toString()
         );
     }
 
@@ -85,8 +87,8 @@ public class EmotiontreeService {
         EmotionTree emotionTree = emotiontreeRepository.findById(request.getTreeId())
                 .orElseThrow(() -> new EntityNotFoundException("감정 나무를 찾을 수 없습니다. ID: " + request.getTreeId()));
 
-        // 완료 처리
-        emotionTree.markDone(request.getImageUrl());
+        // GLB 완료 처리
+        emotionTree.markDoneWithModel(request.getModelUrl(), request.getDataUrl());
         emotiontreeRepository.save(emotionTree);
     }
 

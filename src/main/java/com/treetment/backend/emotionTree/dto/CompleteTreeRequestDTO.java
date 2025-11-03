@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class CompleteTreeRequestDTO {
     private Long treeId;
-    private String imageUrl;
+    private String modelUrl;
+    private String dataUrl;
 }
 

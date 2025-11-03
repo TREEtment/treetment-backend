@@ -33,7 +33,7 @@ SCORE="$3"
 # 2) 런타임 설정 (필요 시 .env로 분리 가능)
 ########################################
 # GPU 측(계정 B)의 리소스
-: "${AMI_ID:=ami-06b628dbe39a5b5b9}"          # 최신으로 교체해두기
+: "${AMI_ID:=ami-0cc380aeaa9a4de71}"          # 최신으로 교체해두기
 : "${INSTANCE_TYPE:=g4dn.xlarge}"
 : "${KEY_NAME:=treetment-blender-server-key-pair}"
 : "${SECURITY_GROUP_ID:=sg-0d3cdd04c8b6b09e7}"
@@ -159,7 +159,7 @@ echo "[worker] Blender response raw:"
 echo "$RESPONSE"
 
 ########################################
-# 7) 응답 파싱 (model_url → imageUrl로 매핑)
+# 7) 응답 파싱 (model_url / data_url)
 ########################################
 # returncode, model_url(data_url는 필요시 활용)
 RETURNCODE="$(echo "$RESPONSE" | jq -r '.returncode // empty' 2>/dev/null || true)"
@@ -175,12 +175,17 @@ echo "[worker] Parsed: returncode=${RETURNCODE:-<empty>} model_url=${MODEL_URL:-
 
 ########################################
 # 8) 내부 콜백 (/api/trees/internal/complete)
-#    백엔드 DTO와의 호환을 위해 imageUrl 키에 GLB URL을 넣어 전달
+#    백엔드 DTO 사양: { treeId, modelUrl, dataUrl? }
 ########################################
 if [ "${RETURNCODE:-1}" = "0" ] && [ -n "${MODEL_URL:-}" ] && [ "${MODEL_URL:-null}" != "null" ]; then
   echo "[worker] Rendering succeeded. Sending completion callback..."
-  CALLBACK_BODY=$(jq -n --arg tid "$TREE_ID" --arg url "$MODEL_URL" \
-    '{treeId: ($tid|tonumber), imageUrl: $url}')
+  if [ -n "${DATA_URL:-}" ] && [ "${DATA_URL}" != "null" ]; then
+    CALLBACK_BODY=$(jq -n --arg tid "$TREE_ID" --arg model "$MODEL_URL" --arg data "$DATA_URL" \
+      '{treeId: ($tid|tonumber), modelUrl: $model, dataUrl: $data}')
+  else
+    CALLBACK_BODY=$(jq -n --arg tid "$TREE_ID" --arg model "$MODEL_URL" \
+      '{treeId: ($tid|tonumber), modelUrl: $model}')
+  fi
 
   CALLBACK_RESP="$(curl -sS -X POST "$BACKEND_LOCAL_URL/api/trees/internal/complete" \
     -H "Content-Type: application/json" \

@@ -10,6 +10,8 @@ import lombok.NoArgsConstructor;
 public class TreeStatusResponseDTO {
     private Long treeId;
     private String status;
-    private String imageUrl;
+    private String modelUrl;
+    private String dataUrl;
+    private String updatedAt;
 }
 
