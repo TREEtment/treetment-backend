@@ -19,7 +19,8 @@ export AWS_PAGER=""
 export INTERNAL_SECRET
 
 # 백엔드 URL (tree.py에서 사용)
-: "${BACKEND_URL:=http://localhost:8080}"
+# GPU 인스턴스에서 실행되므로 실제 백엔드의 Public IP 사용
+: "${BACKEND_URL:=http://3.34.146.140}"
 export BACKEND_URL
 
 ########################################
@@ -122,7 +123,6 @@ fi
 
 ########################################
 # 6) grow-tree 호출 (지수 백오프 재시도)
-#    중요: BACKEND_URL과 INTERNAL_SECRET을 환경변수로 전달
 ########################################
 call_grow() {
   curl -sS -X POST "http://$PUBLIC_IP:9000/grow-tree" \
