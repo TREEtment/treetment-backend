@@ -39,7 +39,8 @@ SCORE="$3"
 # 2) 런타임 설정 (필요 시 .env로 분리 가능)
 ########################################
 # GPU 측(계정 B)의 리소스
-: "${AMI_ID:=ami-0c68a93aaa528bd3f}"          # 최신으로 교체해두기
+# 실제 Blender GPU AMI ID (available 상태여야 함)
+: "${AMI_ID:=ami-0c68a93aaa528bd3f}"          # Blender GPU AMI - 상태 확인 필요!
 : "${INSTANCE_TYPE:=g4dn.xlarge}"
 : "${KEY_NAME:=treetment-blender-server-key-pair}"
 : "${SECURITY_GROUP_ID:=sg-0d3cdd04c8b6b09e7}"
