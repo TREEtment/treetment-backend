@@ -15,7 +15,7 @@ export AWS_DEFAULT_REGION="$AWS_REGION"
 export AWS_PAGER=""
 
 # 내부 콜백용 시크릿 (tree.py에서 사용)
-: "${INTERNAL_SECRET:=super-secret-token}"
+: "${INTERNAL_SECRET:=internal_secret_internal_secret}"
 export INTERNAL_SECRET
 
 # 백엔드 URL (tree.py에서 사용)
@@ -39,7 +39,7 @@ SCORE="$3"
 # 2) 런타임 설정 (필요 시 .env로 분리 가능)
 ########################################
 # GPU 측(계정 B)의 리소스
-: "${AMI_ID:=ami-0cc380aeaa9a4de71}"          # 최신으로 교체해두기
+: "${AMI_ID:=ami-0c68a93aaa528bd3f}"          # 최신으로 교체해두기
 : "${INSTANCE_TYPE:=g4dn.xlarge}"
 : "${KEY_NAME:=treetment-blender-server-key-pair}"
 : "${SECURITY_GROUP_ID:=sg-0d3cdd04c8b6b09e7}"
