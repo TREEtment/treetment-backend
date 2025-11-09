@@ -17,7 +17,7 @@ public class ImageAiService {
     private final RestTemplate restTemplate;
 
     // AI 서버 주소를 설정
-    @Value("${ai.server.url}")
+    @Value("${ai.image.url}")
     private String aiServerUrl;
 
     // AI 서버로 보낼 요청 DTO

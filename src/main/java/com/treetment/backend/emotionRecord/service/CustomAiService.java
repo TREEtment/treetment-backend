@@ -12,7 +12,7 @@ import java.util.Map;
 public class CustomAiService {
     private final RestTemplate restTemplate;
 
-    @Value("${ai.server.url}")
+    @Value("${ai.text.url}")
     private String aiServerUrl;
 
     private record AiRequest(String text) {}

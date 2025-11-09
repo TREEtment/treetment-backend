@@ -61,8 +61,10 @@ openai:
     model: "gpt-3.5-turbo"
 
 ai:
-  server:
-    url: "ENC(Zjlau059N1SSguQZDKzZGCA/KGT8eaVpHwWeJIsOj9dfd6rDszv8fGZ+rc8Ox2R22s9yg71pXpBsit7ih21v9A==)"
+  text:
+    url: "http://text-model-api:8000"
+  image:
+    url: "http://image-model-api:8000"
 
 blender:
   server:
