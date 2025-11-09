@@ -30,10 +30,12 @@ public class EmotionRecordService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new EntityNotFoundException("사용자를 찾을 수 없습니다: " + userId));
         String originalContent = requestDTO.getEmotionContent();
+        
+        // AI로 점수 계산
         String translatedContent = papagoService.translateToEnglish(originalContent);
-
         Map<String, String> emotionProbabilities = customAiService.predictEmotion(translatedContent);
         float emotionScore = calculateWeightedScore(emotionProbabilities);
+        
         String gptAnswer = gptService.getGptAdvice(requestDTO.getEmotionContent());
 
         LocalDate today = LocalDate.now();
@@ -71,18 +73,21 @@ public class EmotionRecordService {
 
     /**
      * 감정 기록 저장 + EmotionTree 대기 생성 후 treeId와 score 반환 (내부용)
+     * 점수만 받아서 사용
      */
     @Transactional
-    public TreeInitResult createRecordAndPendingTree(Integer userId, EmotionRecordCreateRequestDTO requestDTO) {
+    public TreeInitResult createRecordAndPendingTreeWithScore(Integer userId, Float emotionScore) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new EntityNotFoundException("사용자를 찾을 수 없습니다: " + userId));
         
-        String originalContent = requestDTO.getEmotionContent();
-        String translatedContent = papagoService.translateToEnglish(originalContent);
-
-        Map<String, String> emotionProbabilities = customAiService.predictEmotion(translatedContent);
-        float emotionScore = calculateWeightedScore(emotionProbabilities);
-        String gptAnswer = gptService.getGptAdvice(requestDTO.getEmotionContent());
+        if (emotionScore == null) {
+            throw new IllegalArgumentException("emotionScore는 필수입니다.");
+        }
+        
+        // 기본값 설정 (점수만 받으므로 title, content는 기본값 사용)
+        String emotionTitle = "오늘의 감정 기록";
+        String emotionContent = "";
+        String gptAnswer = "";
 
         LocalDate today = LocalDate.now();
         LocalDateTime startOfDay = today.atStartOfDay();
@@ -93,13 +98,13 @@ public class EmotionRecordService {
         EmotionRecord recordToSave;
         if (existingRecordOpt.isPresent()) {
             recordToSave = existingRecordOpt.get();
-            recordToSave.update(requestDTO.getEmotionTitle(), originalContent, emotionScore, gptAnswer);
+            recordToSave.update(emotionTitle, emotionContent, emotionScore, gptAnswer);
         }
         else {
             recordToSave = EmotionRecord.builder()
                     .user(user)
-                    .emotionTitle(requestDTO.getEmotionTitle())
-                    .emotionContent(originalContent)
+                    .emotionTitle(emotionTitle)
+                    .emotionContent(emotionContent)
                     .emotionScore(emotionScore)
                     .gptAnswer(gptAnswer)
                     .build();
@@ -111,15 +116,6 @@ public class EmotionRecordService {
                 emotiontreeService.createPendingTree(savedRecord.getUser().getId(), savedRecord.getEmotionScore());
 
         return new TreeInitResult(treeRenderResponse.getTreeId(), Double.valueOf(savedRecord.getEmotionScore())) ;
-    }
-
-    /**
-     * 비동기 트리 렌더링을 위한 감정 기록 생성 (API 응답용)
-     */
-    @Transactional
-    public com.treetment.backend.emotionTree.dto.TreeRenderResponseDTO createRecordWithAsyncTreeRender(Integer userId, EmotionRecordCreateRequestDTO requestDTO) {
-        TreeInitResult result = createRecordAndPendingTree(userId, requestDTO);
-        return new com.treetment.backend.emotionTree.dto.TreeRenderResponseDTO(result.treeId(), "rendering");
     }
 
     private float calculateWeightedScore(Map<String, String> probabilities) {

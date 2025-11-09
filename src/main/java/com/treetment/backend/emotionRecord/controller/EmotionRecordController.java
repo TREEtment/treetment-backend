@@ -1,6 +1,7 @@
 package com.treetment.backend.emotionRecord.controller;
 
 import com.treetment.backend.emotionRecord.dto.EmotionRecordCreateRequestDTO;
+import com.treetment.backend.emotionRecord.dto.EmotionRecordAsyncTreeRequestDTO;
 import com.treetment.backend.emotionRecord.dto.EmotionRecordDetailDTO;
 import com.treetment.backend.emotionRecord.service.EmotionRecordService;
 import com.treetment.backend.emotionTree.dto.TreeRenderResponseDTO;
@@ -31,15 +32,15 @@ public class EmotionRecordController {
 
     /**
      * 비동기 트리 렌더링을 위한 감정 기록 생성 API
-     * 기존 API와 동일한 입력을 받지만, 트리 렌더링은 비동기로 처리됨
+     * 점수만 받아서 사용
      */
     @PostMapping("/text/user/{userId}/async-tree")
     public ResponseEntity<TreeRenderResponseDTO> createEmotionRecordWithAsyncTree(
             @PathVariable Long userId,
-            @RequestBody EmotionRecordCreateRequestDTO requestDTO) {
+            @RequestBody EmotionRecordAsyncTreeRequestDTO requestDTO) {
 
         // 1) 감정 기록 저장 + EmotionTree 대기 생성
-        EmotionRecordService.TreeInitResult init = emotionRecordService.createRecordAndPendingTree(userId.intValue(), requestDTO);
+        EmotionRecordService.TreeInitResult init = emotionRecordService.createRecordAndPendingTreeWithScore(userId.intValue(), requestDTO.getEmotionScore());
 
         // 2) 즉시 응답
         TreeRenderResponseDTO resp = new TreeRenderResponseDTO(init.treeId(), "rendering");

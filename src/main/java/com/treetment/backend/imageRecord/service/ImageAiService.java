@@ -46,12 +46,23 @@ public class ImageAiService {
         catch (RestClientException e) {
             // 네트워크 오류나 HTTP 4xx, 5xx 에러 등
             String errorMessage = e.getMessage();
-            if (errorMessage != null && errorMessage.contains("UnknownHostException")) {
-                log.error("AI 서버를 찾을 수 없습니다. 호스트 이름 확인 필요 (서버 URL: {}): {}", aiServerUrl, errorMessage);
-            } else if (errorMessage != null && errorMessage.contains("Connection refused")) {
-                log.error("AI 서버에 연결할 수 없습니다. 서버가 실행 중인지 확인하세요 (서버 URL: {}): {}", aiServerUrl, errorMessage);
+            Throwable cause = e.getCause();
+            
+            if (errorMessage != null) {
+                if (errorMessage.contains("UnknownHostException") || 
+                    (errorMessage.contains("I/O error") && errorMessage.contains(aiServerUrl.replace("http://", "").split(":")[0]))) {
+                    log.error("AI 서버를 찾을 수 없습니다. 호스트 이름 '{}'을(를) 해석할 수 없습니다. " +
+                            "Docker 네트워크에서 서비스가 실행 중인지 확인하거나, " +
+                            "로컬 환경에서는 localhost나 실제 IP 주소를 사용하세요. (서버 URL: {})", 
+                            aiServerUrl.replace("http://", "").split(":")[0], aiServerUrl);
+                } else if (errorMessage.contains("Connection refused") || 
+                          (cause != null && cause.getClass().getSimpleName().contains("ConnectException"))) {
+                    log.error("AI 서버에 연결할 수 없습니다. 서버가 실행 중인지 확인하세요 (서버 URL: {}): {}", aiServerUrl, errorMessage);
+                } else {
+                    log.error("AI 서버 호출 중 오류 발생 (서버 URL: {}, 이미지 URL: {}): {}", aiServerUrl, imageUrl, errorMessage);
+                }
             } else {
-                log.error("AI 서버 호출 중 오류 발생 (서버 URL: {}, 이미지 URL: {}): {}", aiServerUrl, imageUrl, errorMessage);
+                log.error("AI 서버 호출 중 알 수 없는 오류 발생 (서버 URL: {}, 이미지 URL: {})", aiServerUrl, imageUrl, e);
             }
             return Collections.emptyMap();
         }
