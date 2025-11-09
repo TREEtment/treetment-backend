@@ -52,7 +52,7 @@ jobs:
             UPLOAD_DIR="$APP_HOME/_upload"
             mkdir -p "$APP_HOME" "$UPLOAD_DIR"
 
-      # 번들 업로드 (폴더 strip)
+      # 번들 업로드 (단일 압축 파일이므로 strip_components 제거)
       - name: Upload tarball to EC2
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -62,7 +62,6 @@ jobs:
           source: "out/app.tar.gz"
           target: "/home/${{ secrets.EC2_USER }}/app/backend/_upload"
           overwrite: true
-          strip_components: 1
           debug: true
 
       # /tmp에 풀어 검증 → rsync로 반영 → Docker Compose up
