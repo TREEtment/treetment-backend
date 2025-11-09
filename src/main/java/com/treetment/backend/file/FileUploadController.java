@@ -3,6 +3,7 @@ package com.treetment.backend.file;
 import com.treetment.backend.global.dto.response.ApiResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -16,9 +17,11 @@ public class FileUploadController {
 
     private final S3StorageService s3StorageService;
 
-    @PostMapping("/image")
-    public ResponseEntity<ApiResponse<String>> uploadImage(@RequestParam("file") MultipartFile file) throws Exception {
-        String url = s3StorageService.uploadImage(file);
+    @PostMapping("/image/{userId}")
+    public ResponseEntity<ApiResponse<String>> uploadImage(
+            @PathVariable Long userId,
+            @RequestParam("file") MultipartFile file) throws Exception {
+        String url = s3StorageService.uploadImage(file, userId);
         return ResponseEntity.ok(ApiResponse.success("이미지 업로드 완료", url));
     }
 

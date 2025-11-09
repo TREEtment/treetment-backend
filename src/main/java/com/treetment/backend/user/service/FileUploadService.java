@@ -11,9 +11,9 @@ public class FileUploadService {
 
     private final S3StorageService s3StorageService;
 
-    public String uploadImage(MultipartFile imageFile) {
+    public String uploadImage(MultipartFile imageFile, Long userId) {
         try {
-            return s3StorageService.uploadImage(imageFile);
+            return s3StorageService.uploadImage(imageFile, userId);
         } catch (Exception e) {
             throw new RuntimeException("이미지 업로드 실패", e);
         }

@@ -27,15 +27,15 @@ public class S3StorageService {
     @Value("${cloud.aws.region.static:ap-northeast-2}")
     private String region;
 
-    public String uploadImage(MultipartFile file) throws IOException {
-        return upload(file, "images");
+    public String uploadImage(MultipartFile file, Long userId) throws IOException {
+        return upload(file, "images", userId);
     }
 
     public String uploadFile(MultipartFile file) throws IOException {
-        return upload(file, "files");
+        return upload(file, "files", null);
     }
 
-    private String upload(MultipartFile file, String folder) throws IOException {
+    private String upload(MultipartFile file, String folder, Long userId) throws IOException {
         if (file == null || file.isEmpty()) {
             throw new IllegalArgumentException("업로드할 파일이 없습니다.");
         }
@@ -45,11 +45,21 @@ public class S3StorageService {
                 ? originalFilename.substring(originalFilename.lastIndexOf('.'))
                 : "";
 
-        String key = String.format("%s/%s/%s%s",
-                folder,
-                LocalDate.now(),
-                UUID.randomUUID(),
-                extension);
+        String key;
+        if (userId != null) {
+            key = String.format("%s/%d/%s/%s%s",
+                    folder,
+                    userId,
+                    LocalDate.now(),
+                    UUID.randomUUID(),
+                    extension);
+        } else {
+            key = String.format("%s/%s/%s%s",
+                    folder,
+                    LocalDate.now(),
+                    UUID.randomUUID(),
+                    extension);
+        }
 
         String contentType = file.getContentType();
         if (contentType == null && originalFilename != null) {

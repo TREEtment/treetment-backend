@@ -49,7 +49,7 @@ public class UserService {
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
 
         // 이미지 업로드
-        String imageUrl = fileUploadService.uploadImage(imageFile);
+        String imageUrl = fileUploadService.uploadImage(imageFile, Long.valueOf(userId));
         
         // 프로필 이미지 URL 업데이트
         user.updateProfileImage(imageUrl);
