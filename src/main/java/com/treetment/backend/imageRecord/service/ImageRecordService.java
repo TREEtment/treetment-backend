@@ -88,8 +88,10 @@ public class ImageRecordService {
     private AiAnalysisResponse analyzeImageAndGetResponse(String imageUrl) {
         Map<String, Float> aiResponseMap = imageAiService.analyzeEmotionFromImage(imageUrl);
         if (aiResponseMap == null || aiResponseMap.isEmpty()) {
+            log.error("AI 서버로부터 감정 분석 결과를 받지 못했습니다. 이미지 URL: {}", imageUrl);
             throw new RuntimeException(
-                    "AI 서버로부터 감정 분석 결과를 받지 못했습니다.");
+                    "AI 서버로부터 감정 분석 결과를 받지 못했습니다. " +
+                    "AI 서버가 실행 중인지 확인하거나 네트워크 연결을 확인해주세요.");
         }
         return new AiAnalysisResponse(aiResponseMap);
     }

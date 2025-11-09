@@ -45,12 +45,19 @@ public class ImageAiService {
         }
         catch (RestClientException e) {
             // 네트워크 오류나 HTTP 4xx, 5xx 에러 등
-            log.error("AI 서버 호출 중 오류 발생 (URL: {}): {}", imageUrl, e.getMessage());
+            String errorMessage = e.getMessage();
+            if (errorMessage != null && errorMessage.contains("UnknownHostException")) {
+                log.error("AI 서버를 찾을 수 없습니다. 호스트 이름 확인 필요 (서버 URL: {}): {}", aiServerUrl, errorMessage);
+            } else if (errorMessage != null && errorMessage.contains("Connection refused")) {
+                log.error("AI 서버에 연결할 수 없습니다. 서버가 실행 중인지 확인하세요 (서버 URL: {}): {}", aiServerUrl, errorMessage);
+            } else {
+                log.error("AI 서버 호출 중 오류 발생 (서버 URL: {}, 이미지 URL: {}): {}", aiServerUrl, imageUrl, errorMessage);
+            }
             return Collections.emptyMap();
         }
         catch (Exception e) {
             // 그 외의 오류
-            log.error("AI 응답 처리 중 알 수 없는 오류 발생", e);
+            log.error("AI 응답 처리 중 알 수 없는 오류 발생 (서버 URL: {}, 이미지 URL: {})", aiServerUrl, imageUrl, e);
             return Collections.emptyMap();
         }
     }
