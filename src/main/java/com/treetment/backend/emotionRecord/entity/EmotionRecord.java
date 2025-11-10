@@ -33,12 +33,10 @@ public class EmotionRecord {
     @Column(nullable = false)
     private String emotionTitle;
 
-    @Lob
-    @Column(columnDefinition = "TEXT")
+    @Column(columnDefinition = "TEXT", nullable = true)
     private String emotionContent;
 
-    @Lob
-    @Column(columnDefinition = "TEXT")
+    @Column(columnDefinition = "TEXT", nullable = true)
     private String gptAnswer;
 
     @CreationTimestamp

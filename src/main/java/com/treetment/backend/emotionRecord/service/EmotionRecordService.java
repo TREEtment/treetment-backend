@@ -88,15 +88,24 @@ public class EmotionRecordService {
         
         EmotionRecord savedRecord = emotionRecordRepository2.save(recordToSave);
         entityManager.flush(); // 명시적으로 flush
+        entityManager.clear(); // 영속성 컨텍스트 클리어
+        
+        System.out.println("저장 후 - ID: " + savedRecord.getId());
         System.out.println("저장 후 - emotionContent: " + savedRecord.getEmotionContent());
         System.out.println("저장 후 - gptAnswer: " + savedRecord.getGptAnswer());
         System.out.println("저장 후 - emotionScore: " + savedRecord.getEmotionScore());
         
-        // 저장 후 다시 조회해서 확인
-        EmotionRecord retrievedRecord = emotionRecordRepository2.findById(savedRecord.getId())
-                .orElseThrow(() -> new RuntimeException("저장된 기록을 찾을 수 없습니다."));
+        // 영속성 컨텍스트 클리어 후 다시 조회해서 확인 (실제 DB에서 조회)
+        Long recordId = savedRecord.getId();
+        EmotionRecord retrievedRecord = emotionRecordRepository2.findById(recordId)
+                .orElseThrow(() -> new RuntimeException("저장된 기록을 찾을 수 없습니다. ID: " + recordId));
         System.out.println("재조회 후 - emotionContent: " + retrievedRecord.getEmotionContent());
         System.out.println("재조회 후 - gptAnswer: " + retrievedRecord.getGptAnswer());
+        System.out.println("재조회 후 - emotionScore: " + retrievedRecord.getEmotionScore());
+        
+        // DTO 생성 전에 한 번 더 확인
+        System.out.println("DTO 생성 전 - retrievedRecord.getEmotionContent(): " + retrievedRecord.getEmotionContent());
+        System.out.println("DTO 생성 전 - retrievedRecord.getGptAnswer(): " + retrievedRecord.getGptAnswer());
         
         // 기존 동기 렌더 호출 제거 - 이제 비동기 방식으로 처리
         // TODO: GPU 워커가 별도로 처리하도록 변경됨
