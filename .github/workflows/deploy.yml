@@ -1,14 +1,11 @@
-name: Deploy Backend (Docker Hub)
+name: Deploy Backend (Docker Hub: muuigong/treetment_backend, backend-only)
 
 on:
   push:
     branches: [ main ]
 
 env:
-  # Docker Hub 사용
   REGISTRY: docker.io
-  # ⚠️ Docker Hub는 'namespace/repo' 한 번만 슬래시 허용합니다.
-  # 예) treetment/treetment-backend-backend  (원래의 owner/repo/backend-backend 를 평탄화)
   IMAGE_NAME: muuigong/treetment_backend
   GIT_SHA: ${{ github.sha }}
 
@@ -22,6 +19,7 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      # 프로젝트 구조 자동 감지 (루트/멀티프로젝트/./backend 단일 프로젝트 모두 지원)
       - name: Detect project layout
         id: detect
         shell: bash
@@ -48,6 +46,7 @@ jobs:
             exit 1
           fi
 
+      # 이미지명은 소문자 권장 (Docker Hub 규칙 대응)
       - name: Normalize image name to lowercase
         id: imagename
         shell: bash
@@ -111,12 +110,12 @@ jobs:
         run: |
           echo "IMAGE_LOWER=$(echo '${{ env.IMAGE_NAME }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
 
-      - name: SSH into server and deploy with Docker Compose
+      - name: SSH into server and deploy with Docker Compose (backend only)
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_KEY }}
+          host: ${{ secrets.EC2_HOST }}      # 기존 시크릿 사용
+          username: ${{ secrets.EC2_USER }}  # 기존 시크릿 사용
+          key: ${{ secrets.EC2_SSH_KEY }}    # 기존 시크릿 사용
           port: ${{ secrets.SSH_PORT || 22 }}
           script_stop: true
           script: |
@@ -131,7 +130,7 @@ jobs:
             echo "Create network(s) if not exist..."
             docker network create appnet || true
 
-            echo "Write/refresh docker-compose.yml..."
+            echo "Write/refresh docker-compose.yml (backend only)..."
             cat > docker-compose.yml <<'COMPOSE'
             services:
               backend:
@@ -142,31 +141,6 @@ jobs:
                   - .env
                 ports:
                   - "8080:8080"
-                depends_on:
-                  - text-model-api
-                  - image-model-api
-                networks:
-                  - appnet
-
-              text-model-api:
-                image: ${{ secrets.TEXT_MODEL_IMAGE }}
-                container_name: text-model-api
-                restart: unless-stopped
-                environment:
-                  - TZ=Asia/Seoul
-                expose:
-                  - "8000"
-                networks:
-                  - appnet
-
-              image-model-api:
-                image: ${{ secrets.IMAGE_MODEL_IMAGE }}
-                container_name: image-model-api
-                restart: unless-stopped
-                environment:
-                  - TZ=Asia/Seoul
-                expose:
-                  - "8000"
                 networks:
                   - appnet
 
@@ -175,20 +149,27 @@ jobs:
                 driver: bridge
             COMPOSE
 
-            echo "Ensure .env has AI service URLs..."
+            echo "Ensure .env exists and inject runtime secrets (backend only)..."
             touch .env
-            grep -q '^AI_TEXT_URL=' .env || echo "AI_TEXT_URL=http://text-model-api:8000" >> .env
-            grep -q '^AI_IMAGE_URL=' .env || echo "AI_IMAGE_URL=http://image-model-api:8000" >> .env
 
-            echo "Start/Update services..."
+            # === 애플리케이션 시크릿/크리덴셜 주입 ===
+            # 중복 방지를 위해 기존 키 제거 후 재추가
+            sed -i '/^AWS_ACCESS_KEY_ID=/d' .env || true
+            sed -i '/^AWS_SECRET_ACCESS_KEY=/d' .env || true
+            sed -i '/^JASYPT_ENCRYPTOR_PASSWORD=/d' .env || true
+            sed -i '/^INTERNAL_SECRET=/d' .env || true
+
+            echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> .env
+            echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> .env
+            echo "JASYPT_ENCRYPTOR_PASSWORD=${{ secrets.JASYPT_ENCRYPTOR_PASSWORD }}" >> .env
+            echo "INTERNAL_SECRET=${{ secrets.INTERNAL_SECRET }}" >> .env
+
+            echo "Start/Update services (backend only)..."
             docker compose pull || true
             docker compose up -d
 
             echo "Show container states..."
             docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}'
 
-            echo "Quick health checks..."
-            docker exec -it backend sh -lc 'echo AI_TEXT_URL=$AI_TEXT_URL AI_IMAGE_URL=$AI_IMAGE_URL; curl -s http://text-model-api:8000/health || true; echo; curl -s http://image-model-api:8000/health || true; echo' || true
-
-            echo "Jar checksum (if available)..."
-            docker exec -it backend sh -lc 'for p in /app/app.jar /workspace/app.jar; do [ -f "$p" ] && echo "JAR=$p" && sha256sum "$p"; done || true' || true
+            echo "Backend quick check..."
+            docker logs --tail 200 backend || true
