@@ -5,121 +5,170 @@ on:
     branches: [ main ]
 
 env:
-  # --- 컨테이너 이미지 레지스트리/이름 설정 ---
-  # GHCR 사용 시:
   REGISTRY: ghcr.io
+  # ghcr 이미지 이름은 반드시 소문자여야 합니다.
   IMAGE_NAME: ${{ github.repository }}/backend-backend
-  # 도커허브를 쓸 경우:
-  # REGISTRY: docker.io
-  # IMAGE_NAME: <DOCKER_ID>/backend-backend
-
-  # 커밋 SHA 태그
   GIT_SHA: ${{ github.sha }}
 
 jobs:
-  build-and-deploy:
+  build-and-push:
     runs-on: ubuntu-latest
-
     permissions:
       contents: read
-      packages: write     # GHCR push 권한 필요 (도커허브면 필요 없음)
+      packages: write
+      id-token: write
+
+    # backend 폴더가 단일 Gradle 프로젝트라고 가정합니다.
+    # (루트 멀티프로젝트일 경우, ./gradlew :backend:bootJar -x test 로 바꾸세요)
+    defaults:
+      run:
+        working-directory: ./backend
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up JDK
+      - name: Normalize image name to lowercase
+        id: imagename
+        shell: bash
+        run: |
+          LOW=$(echo "${{ env.IMAGE_NAME }}" | tr '[:upper:]' '[:lower:]')
+          echo "IMAGE_LOWER=$LOW" >> $GITHUB_OUTPUT
+
+      - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '21'
+          java-version: 21
+          cache: gradle
 
-      - name: Build JAR
-        working-directory: ./backend
+      - name: Make gradlew executable
+        run: chmod +x ./gradlew
+
+      - name: Build JAR (skip tests)
         run: |
           ./gradlew clean bootJar -x test
-          ls -l build/libs
+          ls -l build/libs || true
           sha256sum build/libs/*.jar || true
 
-      - name: Log in to Container Registry
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
         uses: docker/login-action@v3
         with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}               # 도커허브라면 DOCKERHUB_USERNAME
-          password: ${{ secrets.GITHUB_TOKEN }}       # 도커허브라면 DOCKERHUB_TOKEN(or PAT)
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build & Push Image
-        working-directory: ./backend
+      - name: Build and push image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./backend
+          push: true
+          tags: |
+            ${{ steps.imagename.outputs.IMAGE_LOWER }}:${{ env.GIT_SHA }}
+            ${{ steps.imagename.outputs.IMAGE_LOWER }}:latest
+          build-args: |
+            GIT_SHA=${{ env.GIT_SHA }}
+
+      - name: Inspect pushed image (local metadata)
         run: |
-          docker build -t $REGISTRY/${IMAGE_NAME}:${GIT_SHA} -t $REGISTRY/${IMAGE_NAME}:latest .
-          docker push $REGISTRY/${IMAGE_NAME}:${GIT_SHA}
-          docker push $REGISTRY/${IMAGE_NAME}:latest
+          docker buildx imagetools inspect ${{ steps.imagename.outputs.IMAGE_LOWER }}:${{ env.GIT_SHA }} || true
 
-      # 서버로 compose 파일만 안전하게 갱신 (기존 .env는 덮지 않음)
-      - name: Copy docker-compose.yml to server
-        uses: appleboy/scp-action@v0.1.7
+  deploy:
+    runs-on: ubuntu-latest
+    needs: build-and-push
+
+    steps:
+      - name: Checkout (for compose files if needed)
+        uses: actions/checkout@v4
+
+      - name: Normalize image name to lowercase
+        id: imagename
+        shell: bash
+        run: |
+          LOW=$(echo "${{ env.IMAGE_NAME }}" | tr '[:upper:]' '[:lower:]')
+          echo "IMAGE_LOWER=$LOW" >> $GITHUB_OUTPUT
+
+      - name: SSH into server and deploy with Docker Compose
+        uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SSH_HOST }}
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_KEY }}
-          source: "backend/docker-compose.yml"
-          target: "/home/ubuntu/app/backend"
-          strip_components: 1
-
-      - name: Deploy on server
-        uses: appleboy/ssh-action@v1.2.0
-        with:
-          host: ${{ secrets.SSH_HOST }}
-          username: ${{ secrets.SSH_USER }}
-          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          script_stop: true
           script: |
             set -euo pipefail
 
-            APP_DIR="/home/ubuntu/app/backend"
-            cd "$APP_DIR"
+            echo "Login to GHCR..."
+            echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u "${{ github.actor }}" --password-stdin
 
-            # 0) 네트워크 보장
-            docker network inspect appnet >/dev/null 2>&1 || docker network create appnet
+            echo "Pull newest image..."
+            docker pull ${{ steps.imagename.outputs.IMAGE_LOWER }}:${{ env.GIT_SHA }}
 
-            # 1) .env에 GIT_SHA만 안전하게 갱신(기존 비밀키 유지)
-            if [ -f .env ]; then
-              grep -v '^GIT_SHA=' .env > .env.tmp || true
-              echo "GIT_SHA=${{ env.GIT_SHA }}" >> .env.tmp
-              mv .env.tmp .env
-            else
-              echo "GIT_SHA=${{ env.GIT_SHA }}" > .env
-              # 최초 1회: 비밀 값도 여기 추가 필요 (서버에서 수동 편집)
-              # JASYPT_ENCRYPTOR_PASSWORD=...
-              # AWS_ACCESS_KEY_ID=...
-              # AWS_SECRET_ACCESS_KEY=...
-              # INTERNAL_SECRET=...
-              # SPRING_PROFILES_ACTIVE=prod
-              # TZ=Asia/Seoul
-              # (선택) AI_IMAGE_URL, AI_TEXT_URL 커스텀하려면 여기에 추가
-            fi
+            echo "Create network(s) if not exist..."
+            docker network create appnet || true
 
-            # 2) compose가 참조하는 이미지가 이번 SHA인지 점검(이미 ${GIT_SHA} 변수로 참조)
-            #    GHCR 사용 시 ${GITHUB_REPOSITORY} 환경이 서버에는 없으므로 고정값으로 fallback
-            if ! grep -q 'ghcr.io' docker-compose.yml && ! grep -q 'docker.io' docker-compose.yml; then
-              # 필요 시 레지스트리/이미지 경로 치환(옵션)
-              sed -i "s|image: .*backend-backend:.*|image: $REGISTRY/${IMAGE_NAME}:\${GIT_SHA}|" docker-compose.yml || true
-            fi
+            echo "Write/refresh docker-compose.yml..."
+            cat > docker-compose.yml <<'COMPOSE'
+            services:
+              backend:
+                image: ${{ steps.imagename.outputs.IMAGE_LOWER }}:${{ env.GIT_SHA }}
+                container_name: backend
+                restart: unless-stopped
+                env_file:
+                  - .env
+                ports:
+                  - "8080:8080"
+                depends_on:
+                  - text-model-api
+                  - image-model-api
+                networks:
+                  - appnet
 
-            # 3) 최신 이미지 pull + 강제 재생성
+              text-model-api:
+                image: ${{ secrets.TEXT_MODEL_IMAGE }}
+                container_name: text-model-api
+                restart: unless-stopped
+                environment:
+                  - TZ=Asia/Seoul
+                expose:
+                  - "8000"
+                networks:
+                  - appnet
+
+              image-model-api:
+                image: ${{ secrets.IMAGE_MODEL_IMAGE }}
+                container_name: image-model-api
+                restart: unless-stopped
+                environment:
+                  - TZ=Asia/Seoul
+                expose:
+                  - "8000"
+                networks:
+                  - appnet
+
+            networks:
+              appnet:
+                driver: bridge
+            COMPOSE
+
+            echo "Ensure .env has AI service URLs..."
+            touch .env
+            grep -q '^AI_TEXT_URL=' .env || echo "AI_TEXT_URL=http://text-model-api:8000" >> .env
+            grep -q '^AI_IMAGE_URL=' .env || echo "AI_IMAGE_URL=http://image-model-api:8000" >> .env
+
+            echo "Start/Update services..."
             docker compose pull || true
-            docker compose up -d --force-recreate
+            docker compose up -d
 
-            # 4) 배포 검증 로그
-            echo "=== compose config (image/AI_URL/net) ==="
-            docker compose config | sed -n '1,160p' | grep -E 'image:|AI_IMAGE_URL|AI_TEXT_URL|networks' -A1 || true
+            echo "Show container states..."
+            docker ps --format 'table {{.Names}}	{{.Image}}	{{.Status}}	{{.Ports}}'
 
-            echo "=== container/image IDs ==="
-            docker inspect backend -f 'container-image={{.Image}}' || true
-            docker image inspect $REGISTRY/${IMAGE_NAME}:${{ env.GIT_SHA }} -f 'local-image={{.Id}}' || true
+            echo "Quick health checks..."
+            docker exec -it backend sh -lc 'echo AI_TEXT_URL=$AI_TEXT_URL AI_IMAGE_URL=$AI_IMAGE_URL; curl -s http://text-model-api:8000/health || true; echo; curl -s http://image-model-api:8000/health || true; echo' || true
 
-            echo "=== runtime checks ==="
-            docker exec -it backend sh -lc 'echo "AI_IMAGE_URL=$AI_IMAGE_URL"; echo "AI_TEXT_URL=$AI_TEXT_URL"; sha256sum /app/app.jar || true' || true
-
-            echo "=== can backend reach AI containers by service name? ==="
-            docker exec -it backend sh -lc 'curl -s http://image-model-api:8000/health && echo' || true
-            docker exec -it backend sh -lc 'curl -s http://text-model-api:8000/health && echo' || true
+            echo "Jar checksum (if available)..."
+            docker exec -it backend sh -lc 'for p in /app/app.jar /workspace/app.jar; do [ -f "$p" ] && echo "JAR=$p" && sha256sum "$p"; done || true' || true
