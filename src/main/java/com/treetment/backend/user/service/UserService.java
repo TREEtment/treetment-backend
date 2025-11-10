@@ -72,21 +72,27 @@ public class UserService {
 
     @Transactional
     public void deleteUser(Integer userId) {
+        System.out.println("=== DELETE USER CALLED ===");
+        System.out.println("User ID: " + userId);
+        
         // 사용자 존재 확인
         if (!userRepository.existsById(userId)) {
             throw new RuntimeException("사용자를 찾을 수 없습니다.");
         }
 
+        System.out.println("Starting deletion process for user " + userId);
         log.info("Starting deletion process for user {}", userId);
 
         try {
             // 연관된 데이터를 먼저 삭제 (외래 키 제약 조건 해결)
             // 1. EmotionTree 삭제 (Native Query 사용)
+            System.out.println("Attempting to delete emotion trees for user " + userId);
             log.info("Attempting to delete emotion trees for user {}", userId);
             int deletedTrees = entityManager.createNativeQuery("DELETE FROM emotion_tree WHERE user_id = :userId")
                     .setParameter("userId", userId)
                     .executeUpdate();
             entityManager.flush();
+            System.out.println("Deleted " + deletedTrees + " emotion trees for user " + userId);
             log.info("Deleted {} emotion trees for user {}", deletedTrees, userId);
 
             // 2. EmotionRecord 삭제 (이미지 기록 포함) - Native Query 사용
