@@ -1,14 +1,19 @@
+version: "3.9"
+
+networks:
+  appnet:
+    external: true   # 미리 `docker network create appnet`으로 생성되어 있어야 함
+
 services:
   backend:
-    image: backend-backend:latest
+    image: backend-backend:latest        # 네 백엔드 이미지 태그 유지/수정
     container_name: backend
     restart: always
     ports:
-      - "80:8080"
+      - "80:8080"                        # 외부 80 -> 내부 8080
 
-    # ✅ 기존 ENV 유지 + AI 주소/옵션 추가
+    # 기존에 쓰던 ENV + AI 주소/옵션 추가 (리스트 형식 유지)
     environment:
-      # --- 너가 쓰던 것들 그대로 ---
       - JASYPT_ENCRYPTOR_PASSWORD=${JASYPT_ENCRYPTOR_PASSWORD}
       - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-prod}
       - TZ=${TZ:-Asia/Seoul}
@@ -17,17 +22,24 @@ services:
       - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-ap-northeast-2}
       - INTERNAL_SECRET=${INTERNAL_SECRET}
 
-      # --- 내가 추가한 것들 ---
-      # host.docker.internal로 호스트의 8100/8000을 보도록 기본값 지정
+      # ▼ AI 서버를 '호스트 포트'로 고정(재배포/네트워크 흔들려도 안전)
       - AI_IMAGE_URL=${AI_IMAGE_URL:-http://host.docker.internal:8100}
       - AI_TEXT_URL=${AI_TEXT_URL:-http://host.docker.internal:8000}
 
-      # DNS 캐시 안정화(선택이지만 권장)
+      # ▼ DNS 캐시 안정화(간헐적 UnknownHost 방지에 도움)
       - JAVA_OPTS=-Dsun.net.inetaddr.ttl=30 -Dsun.net.inetaddr.negative.ttl=0
 
-    # 컨테이너에서 host.docker.internal을 호스트 IP로 인식시킴
+    # 컨테이너 내부에서 host.docker.internal → 호스트 IP로 해석되게 강제
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
     networks:
       - appnet
+
+    # (옵션) 액추에이터가 열려 있다면 헬스체크 켜기
+    # healthcheck:
+    #   test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health || exit 1"]
+    #   interval: 15s
+    #   timeout: 3s
+    #   retries: 10
+    #   start_period: 30s
