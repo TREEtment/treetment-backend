@@ -2,7 +2,8 @@ name: Deploy Backend (Docker Hub: muuigong/treetment_backend, backend-only)
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main ]   # 기본브랜치명이 다르면 여기 바꾸세요 (예: master)
+  workflow_dispatch:      # 수동 실행 버튼
 
 env:
   REGISTRY: docker.io
@@ -16,10 +17,16 @@ jobs:
       contents: read
 
     steps:
+      - name: Debug – repo/branch
+        run: |
+          echo "repo=${{ github.repository }}"
+          echo "ref=${{ github.ref }}"
+          echo "actor=${{ github.actor }}"
+
       - name: Checkout
         uses: actions/checkout@v4
 
-      # 프로젝트 구조 자동 감지 (루트/멀티프로젝트/./backend 단일 프로젝트 모두 지원)
+      # 프로젝트 구조 자동 감지 (루트/멀티프로젝트/./backend 모두 지원)
       - name: Detect project layout
         id: detect
         shell: bash
@@ -29,24 +36,22 @@ jobs:
             echo "project_dir=backend" >> "$GITHUB_OUTPUT"
             echo "gradle_prefix=" >> "$GITHUB_OUTPUT"
             echo "docker_context=./backend" >> "$GITHUB_OUTPUT"
-            echo "Detected single-project under ./backend"
+            echo "Detected: single-project under ./backend"
           elif [ -f "./gradlew" ] && grep -qE '^include\(.*"backend".*\)' settings.gradle settings.gradle.kts 2>/dev/null; then
             echo "project_dir=." >> "$GITHUB_OUTPUT"
             echo "gradle_prefix=:backend:" >> "$GITHUB_OUTPUT"
             echo "docker_context=./backend" >> "$GITHUB_OUTPUT"
-            echo "Detected multi-project at repo root (:backend:)"
+            echo "Detected: multi-project at repo root (:backend:)"
           elif [ -f "./gradlew" ]; then
             echo "project_dir=." >> "$GITHUB_OUTPUT"
             echo "gradle_prefix=" >> "$GITHUB_OUTPUT"
             echo "docker_context=." >> "$GITHUB_OUTPUT"
-            echo "Detected single-project at repo root"
+            echo "Detected: single-project at repo root"
           else
             echo "::error::gradlew not found in ./backend or repo root"
             ls -la
             exit 1
-          fi
 
-      # 이미지명은 소문자 권장 (Docker Hub 규칙 대응)
       - name: Normalize image name to lowercase
         id: imagename
         shell: bash
@@ -110,27 +115,25 @@ jobs:
         run: |
           echo "IMAGE_LOWER=$(echo '${{ env.IMAGE_NAME }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
 
-      - name: SSH into server and deploy with Docker Compose (backend only)
+      - name: SSH into server and deploy (backend only)
         uses: appleboy/ssh-action@v1.0.3
         with:
-          host: ${{ secrets.EC2_HOST }}      # 기존 시크릿 사용
-          username: ${{ secrets.EC2_USER }}  # 기존 시크릿 사용
-          key: ${{ secrets.EC2_SSH_KEY }}    # 기존 시크릿 사용
+          host: ${{ secrets.EC2_HOST }}
+          username: ${{ secrets.EC2_USER }}
+          key: ${{ secrets.EC2_SSH_KEY }}
           port: ${{ secrets.SSH_PORT || 22 }}
           script_stop: true
           script: |
             set -euo pipefail
-
             echo "Login to Docker Hub..."
             echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login docker.io -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
 
             echo "Pull newest image..."
             docker pull docker.io/${{ steps.imagename.outputs.IMAGE_LOWER }}:${{ env.GIT_SHA }}
 
-            echo "Create network(s) if not exist..."
             docker network create appnet || true
 
-            echo "Write/refresh docker-compose.yml (backend only)..."
+            echo "Write docker-compose.yml (backend only)..."
             cat > docker-compose.yml <<'COMPOSE'
             services:
               backend:
@@ -143,17 +146,13 @@ jobs:
                   - "8080:8080"
                 networks:
                   - appnet
-
             networks:
               appnet:
                 driver: bridge
             COMPOSE
 
-            echo "Ensure .env exists and inject runtime secrets (backend only)..."
+            echo "Prepare .env and inject secrets..."
             touch .env
-
-            # === 애플리케이션 시크릿/크리덴셜 주입 ===
-            # 중복 방지를 위해 기존 키 제거 후 재추가
             sed -i '/^AWS_ACCESS_KEY_ID=/d' .env || true
             sed -i '/^AWS_SECRET_ACCESS_KEY=/d' .env || true
             sed -i '/^JASYPT_ENCRYPTOR_PASSWORD=/d' .env || true
@@ -164,12 +163,12 @@ jobs:
             echo "JASYPT_ENCRYPTOR_PASSWORD=${{ secrets.JASYPT_ENCRYPTOR_PASSWORD }}" >> .env
             echo "INTERNAL_SECRET=${{ secrets.INTERNAL_SECRET }}" >> .env
 
-            echo "Start/Update services (backend only)..."
+            echo "Compose up..."
             docker compose pull || true
             docker compose up -d
 
-            echo "Show container states..."
+            echo "Containers:"
             docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}'
 
-            echo "Backend quick check..."
+            echo "Backend logs (tail 200):"
             docker logs --tail 200 backend || true
