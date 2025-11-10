@@ -126,15 +126,31 @@ public class ImageRecordService {
     }
 
     private String getGptAdviceFromEmotions(Map<String, Float> allEmotions) {
-        StringBuilder analysisBuilder = new StringBuilder();
+        // 감정을 비율 순으로 정렬하여 가장 높은 감정을 강조
         String emotionsAnalysis = allEmotions.entrySet().stream()
-                .map(entry -> String.format("%s: %.2f%%",
-                        entry.getKey(), entry.getValue() * 100))
+                .sorted((e1, e2) -> Float.compare(e2.getValue(), e1.getValue())) // 내림차순 정렬
+                .map(entry -> {
+                    String emotionName = getEmotionNameInKorean(entry.getKey());
+                    return String.format("%s %.1f%%", emotionName, entry.getValue() * 100);
+                })
                 .collect(Collectors.joining(", "));
 
-        analysisBuilder.append("이미지에서 감지된 감정 비율은 다음과 같습니다: ")
-                .append(emotionsAnalysis);
+        StringBuilder analysisBuilder = new StringBuilder();
+        analysisBuilder.append("이미지에서 감지된 감정 비율 (높은 순): ").append(emotionsAnalysis);
 
         return gptService.getGptAdvice(analysisBuilder.toString());
+    }
+
+    private String getEmotionNameInKorean(String emotion) {
+        return switch (emotion.toLowerCase()) {
+            case "happy" -> "행복";
+            case "sad" -> "슬픔";
+            case "angry" -> "분노";
+            case "surprise" -> "놀람";
+            case "fear" -> "공포";
+            case "disgust" -> "혐오";
+            case "neutral" -> "중립";
+            default -> emotion;
+        };
     }
 }

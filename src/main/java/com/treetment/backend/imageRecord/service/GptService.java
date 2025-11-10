@@ -40,9 +40,10 @@ public class GptService {
             return DEFAULT_ADVICE;
         }
         MessageDTO systemMessage = new MessageDTO("system",
-                "당신은 친절한 감정 분석 도우미입니다. " +
-                        "사용자가 업로드한 얼굴 이미지에 대한 감정 비율 별 분석 내용을 바탕으로 오늘 하루를 위로하고 격려하는 짧은 조언을 제공하세요. " +
-                        "조언은 30자 이내로 작성해 주세요.");
+                "당신은 친절하고 따뜻한 감정 분석 도우미입니다. " +
+                        "사용자의 얼굴 이미지에서 감지된 감정 비율을 분석하여, 가장 높은 비율의 감정과 전체적인 감정 상태를 파악하세요. " +
+                        "그 감정 상태에 맞는 위로와 격려의 메시지를 제공하되, 자연스럽고 진심 어린 톤으로 작성하세요. " +
+                        "이모지는 최대 1개만 사용하고, 메시지는 30자 이내로 간결하게 작성해주세요.");
         MessageDTO userMessage = new MessageDTO(USER, imageAnalysis);
 
         OpenAiRequestDTO requestDTO = new OpenAiRequestDTO(

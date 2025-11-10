@@ -11,8 +11,6 @@ import java.time.LocalDateTime;
 public record ImageRecordDetailDTO(
         Long id,
         Integer userId,
-        String emotionTitle,    // 대표 감정
-        String emotionContent,  // 분석 결과를 JSON 형태로 저장
         Float emotionScore,
         String emotionImage,
         LocalDateTime createdAt,
@@ -22,8 +20,6 @@ public record ImageRecordDetailDTO(
         return new ImageRecordDetailDTO(
                 record.getId(),
                 record.getUser().getId(),
-                record.getEmotionTitle(),
-                record.getEmotionContent(),
                 record.getEmotionScore(),
                 record.getEmotionImage(),
                 record.getCreatedAt(),
