@@ -1,29 +1,31 @@
-version: "3.9"
-
-networks:
-  appnet:
-    external: true   # 미리 `docker network create appnet` 으로 만들어져 있어야 함
-
 services:
   backend:
-    image: backend-backend:latest      # <- 네가 쓰는 이미지 태그로 유지/수정
+    image: backend-backend:latest
     container_name: backend
     restart: always
     ports:
-      - "80:8080"                      # 외부 80 -> 내부 8080 (현재와 동일)
+      - "80:8080"
+
+    # ✅ 기존 ENV 유지 + AI 주소/옵션 추가
     environment:
-      SPRING_PROFILES_ACTIVE: prod
+      # --- 너가 쓰던 것들 그대로 ---
+      - JASYPT_ENCRYPTOR_PASSWORD=${JASYPT_ENCRYPTOR_PASSWORD}
+      - SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-prod}
+      - TZ=${TZ:-Asia/Seoul}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-ap-northeast-2}
+      - INTERNAL_SECRET=${INTERNAL_SECRET}
 
-      # ✅ AI 서버 주소를 호스트로 고정 (퍼블릭 IP/도커DNS 이슈 무시)
-      #   - compose 외부에서 넘기면 우선: AI_IMAGE_URL, AI_TEXT_URL
-      #   - 없으면 기본값으로 host.docker.internal 사용
-      AI_IMAGE_URL: "${AI_IMAGE_URL:-http://host.docker.internal:8100}"
-      AI_TEXT_URL:  "${AI_TEXT_URL:-http://host.docker.internal:8000}"
+      # --- 내가 추가한 것들 ---
+      # host.docker.internal로 호스트의 8100/8000을 보도록 기본값 지정
+      - AI_IMAGE_URL=${AI_IMAGE_URL:-http://host.docker.internal:8100}
+      - AI_TEXT_URL=${AI_TEXT_URL:-http://host.docker.internal:8000}
 
-      # ✅ DNS 캐시 안정화(선택이지만 권장)
-      JAVA_OPTS: "-Dsun.net.inetaddr.ttl=30 -Dsun.net.inetaddr.negative.ttl=0"
+      # DNS 캐시 안정화(선택이지만 권장)
+      - JAVA_OPTS=-Dsun.net.inetaddr.ttl=30 -Dsun.net.inetaddr.negative.ttl=0
 
-    # ✅ 컨테이너 내부에서 host.docker.internal 을 호스트 IP로 해석하게 강제
+    # 컨테이너에서 host.docker.internal을 호스트 IP로 인식시킴
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
