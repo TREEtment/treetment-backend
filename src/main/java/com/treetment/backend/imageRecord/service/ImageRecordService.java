@@ -10,8 +10,8 @@ import com.treetment.backend.emotionRecord.entity.EmotionRecord;
 import com.treetment.backend.user.entity.User;
 import com.treetment.backend.user.repository.UserRepository; // 공용 UserRepository 사용
 import jakarta.persistence.EntityNotFoundException;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,13 +23,25 @@ import java.util.stream.Collectors;
 
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class ImageRecordService {
     private final ImageRecordRepository imageRecordRepository;
     private final UserRepository userRepository;
     private final ImageAiService imageAiService;
     private final GptService gptService;
     private final ObjectMapper objectMapper;
+
+    public ImageRecordService(
+            ImageRecordRepository imageRecordRepository,
+            UserRepository userRepository,
+            ImageAiService imageAiService,
+            @Qualifier("imageGptService") GptService gptService,
+            ObjectMapper objectMapper) {
+        this.imageRecordRepository = imageRecordRepository;
+        this.userRepository = userRepository;
+        this.imageAiService = imageAiService;
+        this.gptService = gptService;
+        this.objectMapper = objectMapper;
+    }
 
     // AI 분석 응답을 담기 위한 내부 DTO
     private record AiAnalysisResponse(Map<String, Float> allEmotions) {}
@@ -54,6 +66,7 @@ public class ImageRecordService {
 
         // GPT 한 줄 답변 생성
         String gptAnswer = getGptAdviceFromEmotions(analysisResponse.allEmotions());
+        log.debug("생성된 GPT 답변: {}", gptAnswer);
 
         // 모든 감정 데이터를 JSON 문자열로 반환
         String allEmotionsJson = convertMapToJson(analysisResponse.allEmotions());
@@ -69,6 +82,7 @@ public class ImageRecordService {
                 .build();
 
         EmotionRecord savedRecord = imageRecordRepository.save(newRecord);
+        log.debug("저장된 기록 ID: {}, GPT 답변: {}", savedRecord.getId(), savedRecord.getGptAnswer());
         return ImageRecordDetailDTO.from(savedRecord);
     }
 
