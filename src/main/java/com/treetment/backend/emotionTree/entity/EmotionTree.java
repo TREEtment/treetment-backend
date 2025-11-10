@@ -3,6 +3,8 @@ package com.treetment.backend.emotionTree.entity;
 import com.treetment.backend.user.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 import org.springframework.data.annotation.CreatedDate;
 import org.springframework.data.annotation.LastModifiedDate;
 import org.springframework.data.jpa.domain.support.AuditingEntityListener;
@@ -25,6 +27,7 @@ public class EmotionTree {
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "user_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private User user;
 
     // 추가: 단순 조회/전달 편의를 위한 userId 필드 (동일 컬럼 매핑, 읽기 전용)

@@ -1,9 +1,11 @@
-package com.treetment.backend.PLACEHOLDER.entity;
+package com.treetment.backend.auth.entity;
 
 import com.treetment.backend.user.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 import java.time.LocalDateTime;
 
@@ -21,6 +23,7 @@ public class Verification {
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private User user;
     
     @Column(nullable = false)

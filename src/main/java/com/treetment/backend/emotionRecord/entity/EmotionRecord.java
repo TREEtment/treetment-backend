@@ -1,10 +1,11 @@
 package com.treetment.backend.emotionRecord.entity;
 
 import com.treetment.backend.user.entity.User;
-import com.treetment.backend.global.entity.CreateUpdateAt;
 import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.CreationTimestamp;
+import org.hibernate.annotations.OnDelete;
+import org.hibernate.annotations.OnDeleteAction;
 
 import java.time.LocalDateTime;
 
@@ -22,6 +23,7 @@ public class EmotionRecord {
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     private User user;
     
     private Float emotionScore;
