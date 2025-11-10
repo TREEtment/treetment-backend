@@ -10,6 +10,7 @@ import jakarta.persistence.EntityNotFoundException;
 import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import com.treetment.backend.emotionTree.service.EmotiontreeService;
 import java.util.Map;
@@ -88,17 +89,15 @@ public class EmotionRecordService {
         
         EmotionRecord savedRecord = emotionRecordRepository2.save(recordToSave);
         entityManager.flush(); // 명시적으로 flush
-        entityManager.clear(); // 영속성 컨텍스트 클리어
         
         System.out.println("저장 후 - ID: " + savedRecord.getId());
         System.out.println("저장 후 - emotionContent: " + savedRecord.getEmotionContent());
         System.out.println("저장 후 - gptAnswer: " + savedRecord.getGptAnswer());
         System.out.println("저장 후 - emotionScore: " + savedRecord.getEmotionScore());
         
-        // 영속성 컨텍스트 클리어 후 다시 조회해서 확인 (실제 DB에서 조회)
+        // 별도 트랜잭션에서 재조회해서 확인
         Long recordId = savedRecord.getId();
-        EmotionRecord retrievedRecord = emotionRecordRepository2.findById(recordId)
-                .orElseThrow(() -> new RuntimeException("저장된 기록을 찾을 수 없습니다. ID: " + recordId));
+        EmotionRecord retrievedRecord = verifyRecordSaved(recordId);
         System.out.println("재조회 후 - emotionContent: " + retrievedRecord.getEmotionContent());
         System.out.println("재조회 후 - gptAnswer: " + retrievedRecord.getGptAnswer());
         System.out.println("재조회 후 - emotionScore: " + retrievedRecord.getEmotionScore());
@@ -113,7 +112,17 @@ public class EmotionRecordService {
         //     blenderService.requestTreeGrowth(savedRecord.getEmotionScore(), savedRecord.getUser().getId());
         // }
         
-        return new EmotionRecordDetailDTO(savedRecord);
+        return new EmotionRecordDetailDTO(retrievedRecord);
+    }
+    
+    /**
+     * 별도 트랜잭션에서 레코드를 조회하여 실제 DB에 저장되었는지 확인
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public EmotionRecord verifyRecordSaved(Long recordId) {
+        entityManager.clear(); // 영속성 컨텍스트 클리어
+        return emotionRecordRepository2.findById(recordId)
+                .orElseThrow(() -> new RuntimeException("저장된 기록을 찾을 수 없습니다. ID: " + recordId));
     }
 
     public record TreeInitResult(Long treeId, Double score) {}
