@@ -6,7 +6,6 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  # ghcr 이미지 이름은 반드시 소문자여야 합니다.
   IMAGE_NAME: ${{ github.repository }}/backend-backend
   GIT_SHA: ${{ github.sha }}
 
@@ -18,22 +17,42 @@ jobs:
       packages: write
       id-token: write
 
-    # backend 폴더가 단일 Gradle 프로젝트라고 가정합니다.
-    # (루트 멀티프로젝트일 경우, ./gradlew :backend:bootJar -x test 로 바꾸세요)
-    defaults:
-      run:
-        working-directory: ./backend
-
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+
+      - name: Detect project layout
+        id: detect
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -f "./backend/gradlew" ]; then
+            echo "project_dir=backend" >> "$GITHUB_OUTPUT"
+            echo "gradle_prefix=" >> "$GITHUB_OUTPUT"
+            echo "docker_context=./backend" >> "$GITHUB_OUTPUT"
+            echo "Detected single-project under ./backend"
+          elif [ -f "./gradlew" ] && grep -qE '^include\(.*"backend".*\)' settings.gradle settings.gradle.kts 2>/dev/null; then
+            echo "project_dir=." >> "$GITHUB_OUTPUT"
+            echo "gradle_prefix=:backend:" >> "$GITHUB_OUTPUT"
+            echo "docker_context=./backend" >> "$GITHUB_OUTPUT"
+            echo "Detected multi-project at repo root (:backend:)"
+          elif [ -f "./gradlew" ]; then
+            echo "project_dir=." >> "$GITHUB_OUTPUT"
+            echo "gradle_prefix=" >> "$GITHUB_OUTPUT"
+            echo "docker_context=." >> "$GITHUB_OUTPUT"
+            echo "Detected single-project at repo root"
+          else
+            echo "::error::gradlew not found in ./backend or repo root"
+            ls -la
+            exit 1
+          fi
 
       - name: Normalize image name to lowercase
         id: imagename
         shell: bash
         run: |
           LOW=$(echo "${{ env.IMAGE_NAME }}" | tr '[:upper:]' '[:lower:]')
-          echo "IMAGE_LOWER=$LOW" >> $GITHUB_OUTPUT
+          echo "IMAGE_LOWER=$LOW" >> "$GITHUB_OUTPUT"
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
@@ -43,13 +62,18 @@ jobs:
           cache: gradle
 
       - name: Make gradlew executable
-        run: chmod +x ./gradlew
+        shell: bash
+        run: |
+          chmod +x "${{ steps.detect.outputs.project_dir }}/gradlew" || chmod +x ./gradlew || true
 
       - name: Build JAR (skip tests)
+        shell: bash
+        working-directory: ${{ steps.detect.outputs.project_dir }}
         run: |
-          ./gradlew clean bootJar -x test
-          ls -l build/libs || true
-          sha256sum build/libs/*.jar || true
+          ./gradlew ${{ steps.detect.outputs.gradle_prefix }}clean ${{ steps.detect.outputs.gradle_prefix }}bootJar -x test
+          echo "--- build outputs ---"
+          ls -l $([ -d backend/build/libs ] && echo backend/build/libs || echo build/libs) || true
+          sha256sum $([ -d backend/build/libs ] && echo backend/build/libs/*.jar || echo build/libs/*.jar) || true
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -64,7 +88,7 @@ jobs:
       - name: Build and push image
         uses: docker/build-push-action@v6
         with:
-          context: ./backend
+          context: ${{ steps.detect.outputs.docker_context }}
           push: true
           tags: |
             ${{ steps.imagename.outputs.IMAGE_LOWER }}:${{ env.GIT_SHA }}
@@ -72,7 +96,7 @@ jobs:
           build-args: |
             GIT_SHA=${{ env.GIT_SHA }}
 
-      - name: Inspect pushed image (local metadata)
+      - name: Inspect pushed image (manifest)
         run: |
           docker buildx imagetools inspect ${{ steps.imagename.outputs.IMAGE_LOWER }}:${{ env.GIT_SHA }} || true
 
@@ -81,15 +105,12 @@ jobs:
     needs: build-and-push
 
     steps:
-      - name: Checkout (for compose files if needed)
-        uses: actions/checkout@v4
-
       - name: Normalize image name to lowercase
         id: imagename
         shell: bash
         run: |
           LOW=$(echo "${{ env.IMAGE_NAME }}" | tr '[:upper:]' '[:lower:]')
-          echo "IMAGE_LOWER=$LOW" >> $GITHUB_OUTPUT
+          echo "IMAGE_LOWER=$LOW" >> "$GITHUB_OUTPUT"
 
       - name: SSH into server and deploy with Docker Compose
         uses: appleboy/ssh-action@v1.0.3
