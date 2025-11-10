@@ -1,21 +1,17 @@
 package com.treetment.backend.user.service;
 
-import com.treetment.backend.emotionRecord.entity.EmotionRecord;
-import com.treetment.backend.emotionRecord.repository.EmotionRecordRepository2;
-import com.treetment.backend.emotionReport.entity.EmotionReport;
-import com.treetment.backend.emotionReport.repository.EmotionReportRepository;
-import com.treetment.backend.emotionTree.repository.EmotiontreeRepository;
 import com.treetment.backend.user.dto.UpdateNicknameRequest;
 import com.treetment.backend.user.dto.UserResponse;
 import com.treetment.backend.user.entity.User;
 import com.treetment.backend.user.repository.UserRepository;
+import jakarta.persistence.EntityManager;
+import jakarta.persistence.PersistenceContext;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.List;
 
 @Slf4j
 @Service
@@ -24,9 +20,9 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final FileUploadService fileUploadService;
-    private final EmotiontreeRepository emotiontreeRepository;
-    private final EmotionRecordRepository2 emotionRecordRepository2;
-    private final EmotionReportRepository emotionReportRepository;
+    
+    @PersistenceContext
+    private EntityManager entityManager;
 
     @Transactional(readOnly = true)
     public UserResponse getUserProfile(Integer userId) {
@@ -80,25 +76,41 @@ public class UserService {
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
 
         // 연관된 데이터를 먼저 삭제 (외래 키 제약 조건 해결)
-        // 1. EmotionTree 삭제 (직접 삭제 쿼리 사용)
-        int deletedTrees = emotiontreeRepository.deleteByUser_Id(userId);
+        // 1. EmotionTree 삭제 (Native Query 사용)
+        int deletedTrees = entityManager.createNativeQuery("DELETE FROM emotion_tree WHERE user_id = :userId")
+                .setParameter("userId", userId)
+                .executeUpdate();
         log.info("Deleted {} emotion trees for user {}", deletedTrees, userId);
 
-        // 2. EmotionRecord 삭제 (이미지 기록 포함)
-        List<EmotionRecord> emotionRecords = emotionRecordRepository2.findByUser_Id(userId);
-        if (!emotionRecords.isEmpty()) {
-            emotionRecordRepository2.deleteAll(emotionRecords);
-            log.info("Deleted {} emotion records for user {}", emotionRecords.size(), userId);
+        // 2. EmotionRecord 삭제 (이미지 기록 포함) - Native Query 사용
+        int deletedRecords = entityManager.createNativeQuery("DELETE FROM emotion_record WHERE user_id = :userId")
+                .setParameter("userId", userId)
+                .executeUpdate();
+        log.info("Deleted {} emotion records for user {}", deletedRecords, userId);
+
+        // 3. EmotionReport 삭제 - Native Query 사용
+        int deletedReports = entityManager.createNativeQuery("DELETE FROM emotion_report WHERE user_id = :userId")
+                .setParameter("userId", userId)
+                .executeUpdate();
+        log.info("Deleted {} emotion reports for user {}", deletedReports, userId);
+        
+        // 4. UserNotification 삭제 (혹시 있을 수 있음)
+        int deletedNotifications = entityManager.createNativeQuery("DELETE FROM user_notification WHERE user_id = :userId")
+                .setParameter("userId", userId)
+                .executeUpdate();
+        if (deletedNotifications > 0) {
+            log.info("Deleted {} user notifications for user {}", deletedNotifications, userId);
+        }
+        
+        // 5. Verification 삭제 (혹시 있을 수 있음)
+        int deletedVerifications = entityManager.createNativeQuery("DELETE FROM verification WHERE user_id = :userId")
+                .setParameter("userId", userId)
+                .executeUpdate();
+        if (deletedVerifications > 0) {
+            log.info("Deleted {} verifications for user {}", deletedVerifications, userId);
         }
 
-        // 3. EmotionReport 삭제
-        List<EmotionReport> emotionReports = emotionReportRepository.findByUser_IdOrderByCreatedAtDesc(Long.valueOf(userId));
-        if (!emotionReports.isEmpty()) {
-            emotionReportRepository.deleteAll(emotionReports);
-            log.info("Deleted {} emotion reports for user {}", emotionReports.size(), userId);
-        }
-
-        // 4. User 삭제
+        // 6. User 삭제
         userRepository.delete(user);
 
         log.info("User deleted: {}", user.getEmail());
