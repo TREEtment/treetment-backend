@@ -1,192 +1,125 @@
-name: Simple CI/CD to EC2 (Fast Build)
+name: Deploy Backend
 
 on:
   push:
     branches: [ main ]
 
+env:
+  # --- 컨테이너 이미지 레지스트리/이름 설정 ---
+  # GHCR 사용 시:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/backend-backend
+  # 도커허브를 쓸 경우:
+  # REGISTRY: docker.io
+  # IMAGE_NAME: <DOCKER_ID>/backend-backend
+
+  # 커밋 SHA 태그
+  GIT_SHA: ${{ github.sha }}
+
 jobs:
-  deploy:
+  build-and-deploy:
     runs-on: ubuntu-latest
+
+    permissions:
+      contents: read
+      packages: write     # GHCR push 권한 필요 (도커허브면 필요 없음)
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # Java 21 + Gradle 캐시로 JAR 빌드 (러너에서)
-      - name: Setup Java 21
+      - name: Set up JDK
         uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '21'
-          cache: gradle
 
-      - name: Build bootJar
+      - name: Build JAR
+        working-directory: ./backend
         run: |
-          chmod +x ./gradlew
-          ./gradlew --no-daemon clean bootJar
-          # 가장 첫 번째 JAR을 app.jar로 표준화
-          JAR=$(ls build/libs/*.jar | head -n 1)
-          cp "$JAR" app.jar
-          ls -lh app.jar
+          ./gradlew clean bootJar -x test
+          ls -l build/libs
+          sha256sum build/libs/*.jar || true
 
-      # 업로드용 번들(tar.gz) 만들기: Dockerfile, compose, app.jar만 포함
-      - name: Create deploy bundle
-        run: |
-          mkdir -p out/bundle
-          cp -v app.jar out/bundle/
-          cp -v Dockerfile docker-compose.yml out/bundle/
-          cp -v worker.sh out/bundle/
-          tar -czf out/app.tar.gz -C out/bundle .
-          ls -lh out/app.tar.gz
-
-      # 원격 경로 준비
-      - name: Prepare remote dirs
-        uses: appleboy/ssh-action@v1.2.0
+      - name: Log in to Container Registry
+        uses: docker/login-action@v3
         with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}     # ex) ubuntu, ec2-user
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            set -e
-            APP_HOME="/home/$USER/app/backend"
-            UPLOAD_DIR="$APP_HOME/_upload"
-            mkdir -p "$APP_HOME" "$UPLOAD_DIR"
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}               # 도커허브라면 DOCKERHUB_USERNAME
+          password: ${{ secrets.GITHUB_TOKEN }}       # 도커허브라면 DOCKERHUB_TOKEN(or PAT)
 
-      # 번들 업로드 (단일 압축 파일이므로 strip_components 제거)
-      - name: Upload tarball to EC2
+      - name: Build & Push Image
+        working-directory: ./backend
+        run: |
+          docker build -t $REGISTRY/${IMAGE_NAME}:${GIT_SHA} -t $REGISTRY/${IMAGE_NAME}:latest .
+          docker push $REGISTRY/${IMAGE_NAME}:${GIT_SHA}
+          docker push $REGISTRY/${IMAGE_NAME}:latest
+
+      # 서버로 compose 파일만 안전하게 갱신 (기존 .env는 덮지 않음)
+      - name: Copy docker-compose.yml to server
         uses: appleboy/scp-action@v0.1.7
         with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          source: "out/app.tar.gz"
-          target: "/home/${{ secrets.EC2_USER }}/app/backend/_upload"
-          overwrite: true
-          debug: true
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          source: "backend/docker-compose.yml"
+          target: "/home/ubuntu/app/backend"
+          strip_components: 1
 
-      # /tmp에 풀어 검증 → rsync로 반영 → Docker Compose up
-      # GitHub Secret을 원격에 안전하게 전달(.env 생성)하기 위해 envs 사용
-      - name: Deploy on EC2
+      - name: Deploy on server
         uses: appleboy/ssh-action@v1.2.0
-        env:
-          # GitHub Secrets → 런너 환경변수
-          JASYPT_ENCRYPTOR_PASSWORD: ${{ secrets.JASYPT_ENCRYPTOR_PASSWORD }}
-          # (선택) 항상 prod 프로필/서울 TZ 고정하고 싶다면 여기도 추가 가능
-          SPRING_PROFILES_ACTIVE: prod
-          TZ: Asia/Seoul
-          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
-          AWS_DEFAULT_REGION: ap-northeast-2
-          INTERNAL_SECRET: ${{ secrets.INTERNAL_SECRET }}
         with:
-          host: ${{ secrets.EC2_HOST }}
-          username: ${{ secrets.EC2_USER }}
-          key: ${{ secrets.EC2_SSH_KEY }}
-          command_timeout: 30m
-          # ★ 이 줄이 '원격'으로 넘기는 키: 여기 나열 안 하면 원격 쉘에서 못 씀
-          envs: JASYPT_ENCRYPTOR_PASSWORD,SPRING_PROFILES_ACTIVE,TZ,AWS_ACCESS_KEY_ID,AWS_SECRET_ACCESS_KEY,AWS_DEFAULT_REGION,INTERNAL_SECRET
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
           script: |
-            set -Eeuo pipefail
+            set -euo pipefail
 
-            APP_HOME="/home/$USER/app/backend"
-            UPLOAD_DIR="$APP_HOME/_upload"
-            STAGE_DIR="/tmp/backend_stage_$(date +%s)"
+            APP_DIR="/home/ubuntu/app/backend"
+            cd "$APP_DIR"
 
-            # 업로드 파일 확인
-            if [ -f "$UPLOAD_DIR/out/app.tar.gz" ]; then
-              mv "$UPLOAD_DIR/out/app.tar.gz" "$UPLOAD_DIR/app.tar.gz" || true
-              rmdir "$UPLOAD_DIR/out" 2>/dev/null || true
-            fi
-            [ -f "$UPLOAD_DIR/app.tar.gz" ] || { echo "tar not found"; exit 1; }
+            # 0) 네트워크 보장
+            docker network inspect appnet >/dev/null 2>&1 || docker network create appnet
 
-            # Docker/Compose 설치 (필요 시 1회)
-            if ! command -v docker >/dev/null 2>&1; then
-              sudo apt-get update -y
-              sudo apt-get install -y ca-certificates curl gnupg lsb-release
-              sudo install -m 0755 -d /etc/apt/keyrings
-              curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-              echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/ubuntu $(. /etc/os-release; echo $VERSION_CODENAME) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-              sudo apt-get update -y
-              sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
-              sudo usermod -aG docker $USER || true
-              sudo systemctl enable --now docker
-            fi
-            if docker compose version >/dev/null 2>&1; then
-              DOCKER_COMPOSE="docker compose"
+            # 1) .env에 GIT_SHA만 안전하게 갱신(기존 비밀키 유지)
+            if [ -f .env ]; then
+              grep -v '^GIT_SHA=' .env > .env.tmp || true
+              echo "GIT_SHA=${{ env.GIT_SHA }}" >> .env.tmp
+              mv .env.tmp .env
             else
-              command -v docker-compose >/dev/null 2>&1 || sudo apt-get install -y docker-compose
-              DOCKER_COMPOSE="docker-compose"
+              echo "GIT_SHA=${{ env.GIT_SHA }}" > .env
+              # 최초 1회: 비밀 값도 여기 추가 필요 (서버에서 수동 편집)
+              # JASYPT_ENCRYPTOR_PASSWORD=...
+              # AWS_ACCESS_KEY_ID=...
+              # AWS_SECRET_ACCESS_KEY=...
+              # INTERNAL_SECRET=...
+              # SPRING_PROFILES_ACTIVE=prod
+              # TZ=Asia/Seoul
+              # (선택) AI_IMAGE_URL, AI_TEXT_URL 커스텀하려면 여기에 추가
             fi
 
-            # 스테이징 → 검증 → 반영
-            mkdir -p "$STAGE_DIR"
-            tar -xzf "$UPLOAD_DIR/app.tar.gz" -C "$STAGE_DIR"
-            ls -la "$STAGE_DIR"
-            [ -f "$STAGE_DIR/Dockerfile" ] && [ -f "$STAGE_DIR/docker-compose.yml" ] && [ -f "$STAGE_DIR/app.jar" ] || { echo "bundle content missing"; exit 1; }
-
-            command -v rsync >/dev/null 2>&1 || sudo apt-get install -y rsync
-            mkdir -p "$APP_HOME"
-            rsync -a --delete "$STAGE_DIR/." "$APP_HOME/"
-            rm -rf "$STAGE_DIR" "$UPLOAD_DIR/app.tar.gz"
-
-            cd "$APP_HOME"
-
-            # ====== 🔐 Secrets 주입: .env 생성 (base64 경유) ======
-            # ★ 특수문자/개행 깨짐 방지
-            if [ -z "${JASYPT_ENCRYPTOR_PASSWORD:-}" ]; then
-              echo "[FATAL] JASYPT_ENCRYPTOR_PASSWORD is empty from GitHub Secrets or not passed via 'envs:'"; exit 1
-            fi
-            SECRET_B64="$(printf '%s' "$JASYPT_ENCRYPTOR_PASSWORD" | base64 -w0 2>/dev/null || printf '%s' "$JASYPT_ENCRYPTOR_PASSWORD" | base64)"
-            {
-              echo "JASYPT_ENCRYPTOR_PASSWORD=$(printf '%s' "$SECRET_B64" | base64 -d)"
-              # (선택) 함께 고정하고 싶으면 여기도 기록
-              echo "SPRING_PROFILES_ACTIVE=${SPRING_PROFILES_ACTIVE:-prod}"
-              echo "TZ=${TZ:-Asia/Seoul}"
-              echo "AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}"
-              echo "AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}"
-              echo "AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION:-ap-northeast-2}"
-              echo "INTERNAL_SECRET=${INTERNAL_SECRET}"
-            } > "$APP_HOME/.env"
-            chmod 600 "$APP_HOME/.env"
-
-            # ★ 값 마스킹하여 존재만 확인
-            awk -F= '{print $1"="(length($2)?"***":"<empty>")}' "$APP_HOME/.env"
-
-            # 포트 80 사용 프로세스 정리
-            echo "Checking processes using port 80..."
-            sudo netstat -tlnp | grep :80 || echo "No processes found on port 80"
-            echo "Stopping all Docker containers using port 80..."
-            docker ps -q --filter "publish=80" | xargs -r docker stop || true
-            docker ps -aq --filter "publish=80" | xargs -r docker rm || true
-            sudo systemctl stop apache2 2>/dev/null || true
-            sudo systemctl stop nginx 2>/dev/null || true
-            sudo systemctl stop httpd 2>/dev/null || true
-
-            # Compose up
-            if ! docker ps >/dev/null 2>&1; then
-              echo "Docker permission issue, using sudo"
-              sudo $DOCKER_COMPOSE --env-file "$APP_HOME/.env" down || true
-              sudo $DOCKER_COMPOSE --env-file "$APP_HOME/.env" up -d --build
-            else
-              $DOCKER_COMPOSE --env-file "$APP_HOME/.env" down || true
-              $DOCKER_COMPOSE --env-file "$APP_HOME/.env" up -d --build
+            # 2) compose가 참조하는 이미지가 이번 SHA인지 점검(이미 ${GIT_SHA} 변수로 참조)
+            #    GHCR 사용 시 ${GITHUB_REPOSITORY} 환경이 서버에는 없으므로 고정값으로 fallback
+            if ! grep -q 'ghcr.io' docker-compose.yml && ! grep -q 'docker.io' docker-compose.yml; then
+              # 필요 시 레지스트리/이미지 경로 치환(옵션)
+              sed -i "s|image: .*backend-backend:.*|image: $REGISTRY/${IMAGE_NAME}:\${GIT_SHA}|" docker-compose.yml || true
             fi
 
-            # 이미지 정리
-            docker image prune -f || sudo docker image prune -f || true
+            # 3) 최신 이미지 pull + 강제 재생성
+            docker compose pull || true
+            docker compose up -d --force-recreate
 
-            # 헬스 체크
-            echo "Waiting for application to start..."
-            sleep 15
-            for i in {1..5}; do
-              if curl -fsS http://localhost:80/actuator/health >/dev/null 2>&1; then
-                echo "Health check passed!"
-                break
-              else
-                echo "Health check attempt $i failed, retrying..."
-                sleep 5
-              fi
-            done
+            # 4) 배포 검증 로그
+            echo "=== compose config (image/AI_URL/net) ==="
+            docker compose config | sed -n '1,160p' | grep -E 'image:|AI_IMAGE_URL|AI_TEXT_URL|networks' -A1 || true
 
-            echo "[OK] Deployed. Try: curl http://<EC2_PUBLIC_IP>/actuator/health"
-      
+            echo "=== container/image IDs ==="
+            docker inspect backend -f 'container-image={{.Image}}' || true
+            docker image inspect $REGISTRY/${IMAGE_NAME}:${{ env.GIT_SHA }} -f 'local-image={{.Id}}' || true
+
+            echo "=== runtime checks ==="
+            docker exec -it backend sh -lc 'echo "AI_IMAGE_URL=$AI_IMAGE_URL"; echo "AI_TEXT_URL=$AI_TEXT_URL"; sha256sum /app/app.jar || true' || true
+
+            echo "=== can backend reach AI containers by service name? ==="
+            docker exec -it backend sh -lc 'curl -s http://image-model-api:8000/health && echo' || true
+            docker exec -it backend sh -lc 'curl -s http://text-model-api:8000/health && echo' || true

@@ -66,7 +66,11 @@ public class ImageRecordService {
 
         // GPT 한 줄 답변 생성
         String gptAnswer = getGptAdviceFromEmotions(analysisResponse.allEmotions());
-        log.debug("생성된 GPT 답변: {}", gptAnswer);
+        log.info("생성된 GPT 답변: {}", gptAnswer);
+        if (gptAnswer == null || gptAnswer.isBlank()) {
+            log.warn("GPT 답변이 null이거나 비어있습니다!");
+            gptAnswer = "오늘 하루도 고생 많으셨습니다.";
+        }
 
         // 모든 감정 데이터를 JSON 문자열로 반환
         String allEmotionsJson = convertMapToJson(analysisResponse.allEmotions());
@@ -80,9 +84,16 @@ public class ImageRecordService {
                 .emotionImage(requestDTO.getEmotionImage())
                 .gptAnswer(gptAnswer)
                 .build();
+        
+        log.info("저장 전 - GPT 답변: {}", newRecord.getGptAnswer());
 
         EmotionRecord savedRecord = imageRecordRepository.save(newRecord);
-        log.debug("저장된 기록 ID: {}, GPT 답변: {}", savedRecord.getId(), savedRecord.getGptAnswer());
+        log.info("저장된 기록 ID: {}, 저장 후 GPT 답변: {}", savedRecord.getId(), savedRecord.getGptAnswer());
+        
+        // 저장 후 다시 조회해서 확인
+        EmotionRecord retrievedRecord = imageRecordRepository.findById(savedRecord.getId())
+                .orElseThrow(() -> new RuntimeException("저장된 기록을 찾을 수 없습니다."));
+        log.info("재조회 후 GPT 답변: {}", retrievedRecord.getGptAnswer());
         return ImageRecordDetailDTO.from(savedRecord);
     }
 
