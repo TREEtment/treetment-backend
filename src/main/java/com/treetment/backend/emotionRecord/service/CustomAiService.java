@@ -29,9 +29,29 @@ public class CustomAiService {
                 return Collections.emptyMap();
             }
             
+            System.out.println("AI 서버 원본 응답: " + rawResponse);
+            
+            // emotions 키가 있는 경우 중첩된 구조 처리
+            Object emotionsObj = rawResponse.get("emotions");
+            Map<String, Object> emotionsMap = null;
+            
+            if (emotionsObj instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> temp = (Map<String, Object>) emotionsObj;
+                emotionsMap = temp;
+            } else if (emotionsObj == null) {
+                // emotions 키가 없으면 rawResponse 자체가 감정 데이터일 수 있음
+                emotionsMap = rawResponse;
+            }
+            
+            if (emotionsMap == null || emotionsMap.isEmpty()) {
+                System.err.println("emotions 데이터를 찾을 수 없습니다.");
+                return Collections.emptyMap();
+            }
+            
             // Object를 String으로 안전하게 변환
             Map<String, String> result = new java.util.HashMap<>();
-            for (Map.Entry<String, Object> entry : rawResponse.entrySet()) {
+            for (Map.Entry<String, Object> entry : emotionsMap.entrySet()) {
                 String key = entry.getKey();
                 Object value = entry.getValue();
                 
@@ -39,7 +59,9 @@ public class CustomAiService {
                 if (value instanceof String) {
                     valueStr = (String) value;
                 } else if (value instanceof Number) {
-                    valueStr = String.valueOf(value);
+                    // 숫자인 경우 퍼센트로 변환
+                    double numValue = ((Number) value).doubleValue();
+                    valueStr = String.format("%.2f%%", numValue * 100);
                 } else if (value != null) {
                     // LinkedHashMap이나 다른 타입인 경우 문자열로 변환 시도
                     valueStr = String.valueOf(value);
