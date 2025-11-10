@@ -72,8 +72,10 @@ public class UserService {
 
     @Transactional
     public void deleteUser(Integer userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
+        // 사용자 존재 확인
+        if (!userRepository.existsById(userId)) {
+            throw new RuntimeException("사용자를 찾을 수 없습니다.");
+        }
 
         log.info("Starting deletion process for user {}", userId);
 
@@ -124,12 +126,18 @@ public class UserService {
             // 영속성 컨텍스트 클리어
             entityManager.clear();
             
-            // 6. User 삭제
+            // 6. User 삭제 (Native Query 사용)
             log.info("Attempting to delete user {}", userId);
-            userRepository.delete(user);
+            int deletedUsers = entityManager.createNativeQuery("DELETE FROM auth_users WHERE id = :userId")
+                    .setParameter("userId", userId)
+                    .executeUpdate();
             entityManager.flush();
-
-            log.info("User deleted: {}", user.getEmail());
+            
+            if (deletedUsers == 0) {
+                throw new RuntimeException("사용자 삭제에 실패했습니다.");
+            }
+            
+            log.info("Successfully deleted user {}", userId);
         } catch (Exception e) {
             log.error("Error during user deletion for user {}: {}", userId, e.getMessage(), e);
             throw e;
