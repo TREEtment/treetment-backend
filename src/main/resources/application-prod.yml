@@ -67,9 +67,9 @@ openai:
 
 ai:
   text:
-    url: "http://text-model-api:8000"
+    url: "ENC(CqfDoohjq9Yxwe7tU61aYQv0qY5iFompXa2jXyjFg2PmGbWxjjiyUzAOMdPPya6rET7yppQyT+oneujb+3cJ1w==)"
   image:
-    url: "http://image-model-api:8000"
+    url: "ENC(54Q9ugvxqrXXchYmrtS/gLBHAMidVa97MZ2i3nu2jaXi/hCQpXHIiJk+WAiKjAuBT2F9yVVOl8b2i7SjiQqMRA==)"
 
 blender:
   server:
