@@ -72,16 +72,21 @@ public class UserService {
 
     @Transactional
     public void deleteUser(Integer userId) {
-        System.out.println("=== DELETE USER CALLED ===");
-        System.out.println("User ID: " + userId);
+        // 강제로 로그 출력 (확실하게 보이도록)
+        System.err.println("========================================");
+        System.err.println("=== DELETE USER CALLED ===");
+        System.err.println("User ID: " + userId);
+        System.err.println("========================================");
+        log.error("=== DELETE USER CALLED === User ID: {}", userId);
         
         // 사용자 존재 확인
         if (!userRepository.existsById(userId)) {
+            log.error("User not found: {}", userId);
             throw new RuntimeException("사용자를 찾을 수 없습니다.");
         }
 
-        System.out.println("Starting deletion process for user " + userId);
-        log.info("Starting deletion process for user {}", userId);
+        System.err.println("Starting deletion process for user " + userId);
+        log.error("Starting deletion process for user {}", userId);
 
         try {
             // 연관된 데이터를 먼저 삭제 (외래 키 제약 조건 해결)
