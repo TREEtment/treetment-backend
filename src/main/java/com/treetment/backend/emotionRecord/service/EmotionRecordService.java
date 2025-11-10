@@ -134,10 +134,27 @@ public class EmotionRecordService {
         double weightedSum = 0.0;
         for (Map.Entry<String, String> entry : probabilities.entrySet()) {
             String emotion = entry.getKey();
-            double probability = Double.parseDouble(entry.getValue().replace("%", "")) / 100.0;
-            double weight = weights.getOrDefault(emotion, 0.0);
-
-            weightedSum += probability * weight;
+            Object valueObj = entry.getValue();
+            
+            // 값이 String이 아닌 경우 (LinkedHashMap 등) 처리
+            String valueStr;
+            if (valueObj instanceof String) {
+                valueStr = (String) valueObj;
+            } else if (valueObj instanceof Number) {
+                valueStr = String.valueOf(valueObj);
+            } else {
+                // LinkedHashMap이나 다른 타입인 경우 건너뛰기
+                continue;
+            }
+            
+            try {
+                double probability = Double.parseDouble(valueStr.replace("%", "")) / 100.0;
+                double weight = weights.getOrDefault(emotion, 0.0);
+                weightedSum += probability * weight;
+            } catch (NumberFormatException e) {
+                // 숫자로 변환할 수 없는 경우 건너뛰기
+                continue;
+            }
         }
         double scoreOutOf100 = (weightedSum + 1) * 45 + 10;
         return (float) (Math.round(scoreOutOf100 * 10.0) / 10.0);
