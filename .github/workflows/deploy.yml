@@ -2,61 +2,48 @@ name: Deploy Backend (Docker Hub, backend-only)
 
 on:
   push:
-    branches: [ main ]        # 기본 브랜치가 다르면 수정 (예: master)
-  workflow_dispatch:          # 수동 실행 버튼
+    branches: [ main ]
+  workflow_dispatch:
 
 env:
-  REGISTRY: docker.io
   IMAGE_NAME: muuigong/treetment_backend
-  GIT_SHA: ${{ github.sha }}
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
     permissions:
       contents: read
-
     steps:
-      - name: Debug – repo/branch
-        run: |
-          echo "repo=${{ github.repository }}"
-          echo "ref=${{ github.ref }}"
-          echo "actor=${{ github.actor }}"
-
       - name: Checkout
         uses: actions/checkout@v4
 
-      # 루트/멀티프로젝트(:backend:)/backend 단일프로젝트 자동 감지
-      - name: Detect project layout
+      - name: Detect layout
         id: detect
         shell: bash
         run: |
           set -euo pipefail
           if [ -f "./backend/gradlew" ]; then
             echo "project_dir=backend" >> "$GITHUB_OUTPUT"
-            echo "gradle_prefix=" >> "$GITHUB_OUTPUT"
             echo "docker_context=./backend" >> "$GITHUB_OUTPUT"
-            echo "Detected: single-project under ./backend"
+            echo "gradle_prefix=" >> "$GITHUB_OUTPUT"
           elif [ -f "./gradlew" ] && grep -qE '^include\(.*"backend".*\)' settings.gradle settings.gradle.kts 2>/dev/null; then
             echo "project_dir=." >> "$GITHUB_OUTPUT"
-            echo "gradle_prefix=:backend:" >> "$GITHUB_OUTPUT"
             echo "docker_context=./backend" >> "$GITHUB_OUTPUT"
-            echo "Detected: multi-project at repo root (:backend:)"
+            echo "gradle_prefix=:backend:" >> "$GITHUB_OUTPUT"
           elif [ -f "./gradlew" ]; then
             echo "project_dir=." >> "$GITHUB_OUTPUT"
-            echo "gradle_prefix=" >> "$GITHUB_OUTPUT"
             echo "docker_context=." >> "$GITHUB_OUTPUT"
-            echo "Detected: single-project at repo root"
+            echo "gradle_prefix=" >> "$GITHUB_OUTPUT"
           else
-            echo "::error::gradlew not found in ./backend or repo root"
-            ls -la
-            exit 1
+            echo "::error::gradlew not found"; exit 1
+          fi
 
-      - name: Normalize image name to lowercase
+      - name: Normalize image name
         id: imagename
         shell: bash
         run: |
-          echo "IMAGE_LOWER=$(echo '${{ env.IMAGE_NAME }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+          low=$(echo "${{ env.IMAGE_NAME }}" | tr '[:upper:]' '[:lower:]')
+          echo "name=$low" >> "$GITHUB_OUTPUT"
 
       - name: Set up JDK 21
         uses: actions/setup-java@v4
@@ -68,16 +55,16 @@ jobs:
       - name: Make gradlew executable
         shell: bash
         run: |
-          chmod +x "${{ steps.detect.outputs.project_dir }}/gradlew" || chmod +x ./gradlew || true
+          chmod +x "${{ steps.detect.outputs.project_dir }}/gradlew" || true
+          chmod +x ./gradlew || true
 
       - name: Build JAR (skip tests)
         shell: bash
         working-directory: ${{ steps.detect.outputs.project_dir }}
         run: |
           ./gradlew ${{ steps.detect.outputs.gradle_prefix }}clean ${{ steps.detect.outputs.gradle_prefix }}bootJar -x test
-          echo "--- build outputs ---"
-          ls -l $([ -d backend/build/libs ] && echo backend/build/libs || echo build/libs) || true
-          sha256sum $([ -d backend/build/libs ] && echo backend/build/libs/*.jar || echo build/libs/*.jar) || true
+          ls -l build/libs || true
+          sha256sum build/libs/*.jar || true
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -95,79 +82,65 @@ jobs:
           context: ${{ steps.detect.outputs.docker_context }}
           push: true
           tags: |
-            docker.io/${{ steps.imagename.outputs.IMAGE_LOWER }}:${{ env.GIT_SHA }}
-            docker.io/${{ steps.imagename.outputs.IMAGE_LOWER }}:latest
-          build-args: |
-            GIT_SHA=${{ env.GIT_SHA }}
+            docker.io/${{ steps.imagename.outputs.name }}:${{ github.sha }}
+            docker.io/${{ steps.imagename.outputs.name }}:latest
 
   deploy:
     runs-on: ubuntu-latest
     needs: build-and-push
-
     steps:
-      - name: Normalize image name to lowercase
+      - name: Normalize image name
         id: imagename
         shell: bash
         run: |
-          echo "IMAGE_LOWER=$(echo '${{ env.IMAGE_NAME }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+          low=$(echo "${{ env.IMAGE_NAME }}" | tr '[:upper:]' '[:lower:]')
+          echo "name=$low" >> "$GITHUB_OUTPUT"
 
-      - name: SSH into server and deploy (backend only)
+      - name: Deploy via SSH (backend only)
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          # port를 쓰면 여기 추가: port: ${{ secrets.SSH_PORT }}
           script_stop: true
           script: |
             set -euo pipefail
 
-            IMG="docker.io/${{ steps.imagename.outputs.IMAGE_LOWER }}:${{ env.GIT_SHA }}"
+            IMG="docker.io/${{ steps.imagename.outputs.name }}:${{ github.sha }}"
 
-            echo "Login to Docker Hub..."
             echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login docker.io -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
-
-            echo "Pull newest image: $IMG"
             docker pull "$IMG"
-
             docker network create appnet || true
 
-            echo "Write docker-compose.yml (backend only)..."
-            printf '%s\n' \
-'services:' \
-'  backend:' \
-"    image: $IMG" \
-'    container_name: backend' \
-'    restart: unless-stopped' \
-'    env_file:' \
-'      - .env' \
-'    ports:' \
-'      - "8080:8080"' \
-'    networks:' \
-'      - appnet' \
-'networks:' \
-'  appnet:' \
-'    driver: bridge' \
-> docker-compose.yml
+            # docker-compose.yml (backend only)
+            cat > docker-compose.yml <<EOF
+            services:
+              backend:
+                image: $IMG
+                container_name: backend
+                restart: unless-stopped
+                env_file:
+                  - .env
+                ports:
+                  - "8080:8080"
+                networks:
+                  - appnet
+            networks:
+              appnet:
+                driver: bridge
+            EOF
 
-            echo "Prepare .env and inject secrets..."
+            # .env (필요 시크릿 주입)
             touch .env
             sed -i '/^AWS_ACCESS_KEY_ID=/d' .env || true
             sed -i '/^AWS_SECRET_ACCESS_KEY=/d' .env || true
             sed -i '/^JASYPT_ENCRYPTOR_PASSWORD=/d' .env || true
             sed -i '/^INTERNAL_SECRET=/d' .env || true
-
             echo "AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}" >> .env
             echo "AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}" >> .env
             echo "JASYPT_ENCRYPTOR_PASSWORD=${{ secrets.JASYPT_ENCRYPTOR_PASSWORD }}" >> .env
             echo "INTERNAL_SECRET=${{ secrets.INTERNAL_SECRET }}" >> .env
 
-            echo "Compose up..."
-            docker compose pull || true
             docker compose up -d
-
-            echo "Containers:"
             docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}'
-
-            echo "Backend logs (tail 200):"
             docker logs --tail 200 backend || true
