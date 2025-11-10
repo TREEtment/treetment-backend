@@ -75,44 +75,64 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("사용자를 찾을 수 없습니다."));
 
-        // 연관된 데이터를 먼저 삭제 (외래 키 제약 조건 해결)
-        // 1. EmotionTree 삭제 (Native Query 사용)
-        int deletedTrees = entityManager.createNativeQuery("DELETE FROM emotion_tree WHERE user_id = :userId")
-                .setParameter("userId", userId)
-                .executeUpdate();
-        log.info("Deleted {} emotion trees for user {}", deletedTrees, userId);
+        log.info("Starting deletion process for user {}", userId);
 
-        // 2. EmotionRecord 삭제 (이미지 기록 포함) - Native Query 사용
-        int deletedRecords = entityManager.createNativeQuery("DELETE FROM emotion_record WHERE user_id = :userId")
-                .setParameter("userId", userId)
-                .executeUpdate();
-        log.info("Deleted {} emotion records for user {}", deletedRecords, userId);
+        try {
+            // 연관된 데이터를 먼저 삭제 (외래 키 제약 조건 해결)
+            // 1. EmotionTree 삭제 (Native Query 사용)
+            log.info("Attempting to delete emotion trees for user {}", userId);
+            int deletedTrees = entityManager.createNativeQuery("DELETE FROM emotion_tree WHERE user_id = :userId")
+                    .setParameter("userId", userId)
+                    .executeUpdate();
+            entityManager.flush();
+            log.info("Deleted {} emotion trees for user {}", deletedTrees, userId);
 
-        // 3. EmotionReport 삭제 - Native Query 사용
-        int deletedReports = entityManager.createNativeQuery("DELETE FROM emotion_report WHERE user_id = :userId")
-                .setParameter("userId", userId)
-                .executeUpdate();
-        log.info("Deleted {} emotion reports for user {}", deletedReports, userId);
-        
-        // 4. UserNotification 삭제 (혹시 있을 수 있음)
-        int deletedNotifications = entityManager.createNativeQuery("DELETE FROM user_notification WHERE user_id = :userId")
-                .setParameter("userId", userId)
-                .executeUpdate();
-        if (deletedNotifications > 0) {
-            log.info("Deleted {} user notifications for user {}", deletedNotifications, userId);
+            // 2. EmotionRecord 삭제 (이미지 기록 포함) - Native Query 사용
+            log.info("Attempting to delete emotion records for user {}", userId);
+            int deletedRecords = entityManager.createNativeQuery("DELETE FROM emotion_record WHERE user_id = :userId")
+                    .setParameter("userId", userId)
+                    .executeUpdate();
+            entityManager.flush();
+            log.info("Deleted {} emotion records for user {}", deletedRecords, userId);
+
+            // 3. EmotionReport 삭제 - Native Query 사용
+            log.info("Attempting to delete emotion reports for user {}", userId);
+            int deletedReports = entityManager.createNativeQuery("DELETE FROM emotion_report WHERE user_id = :userId")
+                    .setParameter("userId", userId)
+                    .executeUpdate();
+            entityManager.flush();
+            log.info("Deleted {} emotion reports for user {}", deletedReports, userId);
+            
+            // 4. UserNotification 삭제 (혹시 있을 수 있음)
+            int deletedNotifications = entityManager.createNativeQuery("DELETE FROM user_notification WHERE user_id = :userId")
+                    .setParameter("userId", userId)
+                    .executeUpdate();
+            entityManager.flush();
+            if (deletedNotifications > 0) {
+                log.info("Deleted {} user notifications for user {}", deletedNotifications, userId);
+            }
+            
+            // 5. Verification 삭제 (혹시 있을 수 있음)
+            int deletedVerifications = entityManager.createNativeQuery("DELETE FROM verification WHERE user_id = :userId")
+                    .setParameter("userId", userId)
+                    .executeUpdate();
+            entityManager.flush();
+            if (deletedVerifications > 0) {
+                log.info("Deleted {} verifications for user {}", deletedVerifications, userId);
+            }
+
+            // 영속성 컨텍스트 클리어
+            entityManager.clear();
+            
+            // 6. User 삭제
+            log.info("Attempting to delete user {}", userId);
+            userRepository.delete(user);
+            entityManager.flush();
+
+            log.info("User deleted: {}", user.getEmail());
+        } catch (Exception e) {
+            log.error("Error during user deletion for user {}: {}", userId, e.getMessage(), e);
+            throw e;
         }
-        
-        // 5. Verification 삭제 (혹시 있을 수 있음)
-        int deletedVerifications = entityManager.createNativeQuery("DELETE FROM verification WHERE user_id = :userId")
-                .setParameter("userId", userId)
-                .executeUpdate();
-        if (deletedVerifications > 0) {
-            log.info("Deleted {} verifications for user {}", deletedVerifications, userId);
-        }
-
-        // 6. User 삭제
-        userRepository.delete(user);
-
-        log.info("User deleted: {}", user.getEmail());
     }
 }
