@@ -30,13 +30,22 @@ public class EmotionRecordService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new EntityNotFoundException("사용자를 찾을 수 없습니다: " + userId));
         String originalContent = requestDTO.getEmotionContent();
+        System.out.println("=== createRecord 시작 ===");
+        System.out.println("originalContent: " + originalContent);
+        System.out.println("emotionTitle: " + requestDTO.getEmotionTitle());
         
         // AI로 점수 계산
         String translatedContent = papagoService.translateToEnglish(originalContent);
+        System.out.println("번역된 내용: " + translatedContent);
+        
         Map<String, String> emotionProbabilities = customAiService.predictEmotion(translatedContent);
+        System.out.println("AI 서버 응답: " + emotionProbabilities);
+        
         float emotionScore = calculateWeightedScore(emotionProbabilities);
+        System.out.println("계산된 점수: " + emotionScore);
         
         String gptAnswer = gptService.getGptAdvice(requestDTO.getEmotionContent());
+        System.out.println("GPT 답변: " + gptAnswer);
 
         LocalDate today = LocalDate.now();
         LocalDateTime startOfDay = today.atStartOfDay();
@@ -47,9 +56,13 @@ public class EmotionRecordService {
         EmotionRecord recordToSave;
         if (existingRecordOpt.isPresent()) {
             recordToSave = existingRecordOpt.get();
+            System.out.println("기존 기록 업데이트");
             recordToSave.update(requestDTO.getEmotionTitle(), originalContent, emotionScore, gptAnswer);
+            System.out.println("업데이트 후 - emotionContent: " + recordToSave.getEmotionContent());
+            System.out.println("업데이트 후 - gptAnswer: " + recordToSave.getGptAnswer());
         }
         else {
+            System.out.println("새 기록 생성");
             recordToSave = EmotionRecord.builder()
                     .user(user)
                     .emotionTitle(requestDTO.getEmotionTitle())
@@ -57,8 +70,14 @@ public class EmotionRecordService {
                     .emotionScore(emotionScore)
                     .gptAnswer(gptAnswer)
                     .build();
+            System.out.println("생성 후 - emotionContent: " + recordToSave.getEmotionContent());
+            System.out.println("생성 후 - gptAnswer: " + recordToSave.getGptAnswer());
         }
+        
         EmotionRecord savedRecord = emotionRecordRepository2.save(recordToSave);
+        System.out.println("저장 후 - emotionContent: " + savedRecord.getEmotionContent());
+        System.out.println("저장 후 - gptAnswer: " + savedRecord.getGptAnswer());
+        System.out.println("저장 후 - emotionScore: " + savedRecord.getEmotionScore());
         
         // 기존 동기 렌더 호출 제거 - 이제 비동기 방식으로 처리
         // TODO: GPU 워커가 별도로 처리하도록 변경됨
@@ -132,30 +151,34 @@ public class EmotionRecordService {
         );
 
         double weightedSum = 0.0;
+        int processedCount = 0;
+        
         for (Map.Entry<String, String> entry : probabilities.entrySet()) {
             String emotion = entry.getKey();
-            Object valueObj = entry.getValue();
+            String valueStr = entry.getValue();
             
-            // 값이 String이 아닌 경우 (LinkedHashMap 등) 처리
-            String valueStr;
-            if (valueObj instanceof String) {
-                valueStr = (String) valueObj;
-            } else if (valueObj instanceof Number) {
-                valueStr = String.valueOf(valueObj);
-            } else {
-                // LinkedHashMap이나 다른 타입인 경우 건너뛰기
+            if (valueStr == null || valueStr.isBlank()) {
                 continue;
             }
             
             try {
-                double probability = Double.parseDouble(valueStr.replace("%", "")) / 100.0;
+                // "%" 제거하고 숫자로 변환
+                String cleanedValue = valueStr.replace("%", "").trim();
+                double probability = Double.parseDouble(cleanedValue) / 100.0;
                 double weight = weights.getOrDefault(emotion, 0.0);
                 weightedSum += probability * weight;
+                processedCount++;
             } catch (NumberFormatException e) {
                 // 숫자로 변환할 수 없는 경우 건너뛰기
                 continue;
             }
         }
+        
+        // 처리된 항목이 없으면 기본값 반환
+        if (processedCount == 0) {
+            return 55.0f;
+        }
+        
         double scoreOutOf100 = (weightedSum + 1) * 45 + 10;
         return (float) (Math.round(scoreOutOf100 * 10.0) / 10.0);
     }
