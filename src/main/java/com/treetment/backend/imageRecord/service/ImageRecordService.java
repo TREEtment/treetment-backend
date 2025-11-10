@@ -9,7 +9,9 @@ import com.treetment.backend.imageRecord.repository.ImageRecordRepository;
 import com.treetment.backend.emotionRecord.entity.EmotionRecord;
 import com.treetment.backend.user.entity.User;
 import com.treetment.backend.user.repository.UserRepository; // 공용 UserRepository 사용
+import jakarta.persistence.EntityManager;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.persistence.PersistenceContext;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
@@ -29,6 +31,9 @@ public class ImageRecordService {
     private final ImageAiService imageAiService;
     private final GptService gptService;
     private final ObjectMapper objectMapper;
+    
+    @PersistenceContext
+    private EntityManager entityManager;
 
     public ImageRecordService(
             ImageRecordRepository imageRecordRepository,
@@ -90,11 +95,21 @@ public class ImageRecordService {
         EmotionRecord savedRecord = imageRecordRepository.save(newRecord);
         log.info("저장된 기록 ID: {}, 저장 후 GPT 답변: {}", savedRecord.getId(), savedRecord.getGptAnswer());
         
+        // 명시적으로 flush
+        entityManager.flush();
+        log.info("Flush 완료 - GPT 답변: {}", savedRecord.getGptAnswer());
+        
         // 저장 후 다시 조회해서 확인
         EmotionRecord retrievedRecord = imageRecordRepository.findById(savedRecord.getId())
                 .orElseThrow(() -> new RuntimeException("저장된 기록을 찾을 수 없습니다."));
         log.info("재조회 후 GPT 답변: {}", retrievedRecord.getGptAnswer());
-        return ImageRecordDetailDTO.from(savedRecord);
+        
+        // DTO 생성 전에 한 번 더 확인
+        log.info("DTO 생성 전 - savedRecord.getGptAnswer(): {}", savedRecord.getGptAnswer());
+        ImageRecordDetailDTO dto = ImageRecordDetailDTO.from(savedRecord);
+        log.info("DTO 생성 후 - dto.gptAnswer(): {}", dto.gptAnswer());
+        
+        return dto;
     }
 
     private User findUserById(Long userId) {
@@ -151,6 +166,8 @@ public class ImageRecordService {
     }
 
     private String getGptAdviceFromEmotions(Map<String, Float> allEmotions) {
+        log.info("getGptAdviceFromEmotions 호출 - 감정 개수: {}", allEmotions.size());
+        
         // 감정을 비율 순으로 정렬하여 가장 높은 감정을 강조
         String emotionsAnalysis = allEmotions.entrySet().stream()
                 .sorted((e1, e2) -> Float.compare(e2.getValue(), e1.getValue())) // 내림차순 정렬
@@ -162,8 +179,17 @@ public class ImageRecordService {
 
         StringBuilder analysisBuilder = new StringBuilder();
         analysisBuilder.append("이미지에서 감지된 감정 비율 (높은 순): ").append(emotionsAnalysis);
-
-        return gptService.getGptAdvice(analysisBuilder.toString());
+        
+        log.info("GPT 서비스에 전달할 분석 텍스트: {}", analysisBuilder.toString());
+        String gptAnswer = gptService.getGptAdvice(analysisBuilder.toString());
+        log.info("GPT 서비스에서 받은 답변: {}", gptAnswer);
+        
+        if (gptAnswer == null) {
+            log.error("GPT 서비스가 null을 반환했습니다!");
+            gptAnswer = "오늘 하루도 고생 많으셨습니다.";
+        }
+        
+        return gptAnswer;
     }
 
     private String getEmotionNameInKorean(String emotion) {
