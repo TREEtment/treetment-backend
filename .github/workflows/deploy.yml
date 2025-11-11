@@ -137,8 +137,10 @@ jobs:
                 - appnet
 
               depends_on:
-                - image-model-api
-                - text-model-api
+                image-model-api:
+                  condition: service_healthy
+                text-model-api:
+                  condition: service_healthy
 
               # 헬스체크를 쓰면 롤링 재배포 안정성 ↑ (액추에이터 열려있을 때)
               # healthcheck:
@@ -162,7 +164,7 @@ jobs:
                 sh -c "
                   set -e &&
                   apt-get update &&
-                  apt-get install -y --no-install-recommends libglib2.0-0 libsm6 libxext6 libxrender1 libgl1 libgomp1 &&
+                  apt-get install -y --no-install-recommends libglib2.0-0 libsm6 libxext6 libxrender1 libgl1 libgomp1 curl &&
                   rm -rf /var/lib/apt/lists/* &&
                   pip install --no-cache-dir 'numpy<2.0,>=1.24' &&
                   pip install --no-cache-dir fastapi 'uvicorn[standard]' pillow requests safetensors &&
@@ -170,6 +172,12 @@ jobs:
                   pip install --no-cache-dir transformers==4.40.2 &&
                   exec uvicorn image_api:app --host 0.0.0.0 --port 8000 --workers 1
                 "
+              healthcheck:
+                test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+                interval: 10s
+                timeout: 5s
+                retries: 5
+                start_period: 60s
               networks:
                 - appnet
 
@@ -188,13 +196,19 @@ jobs:
                 sh -c "
                   set -e &&
                   apt-get update &&
-                  apt-get install -y --no-install-recommends libgomp1 &&
+                  apt-get install -y --no-install-recommends libgomp1 curl &&
                   rm -rf /var/lib/apt/lists/* &&
                   pip install --no-cache-dir 'numpy<2' fastapi 'uvicorn[standard]' requests pillow &&
                   pip install --no-cache-dir transformers==4.40.2 &&
                   pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch==2.2.2+cpu &&
                   exec uvicorn api:app --host 0.0.0.0 --port 8000 --workers 1
                 "
+              healthcheck:
+                test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+                interval: 10s
+                timeout: 5s
+                retries: 5
+                start_period: 60s
               networks:
                 - appnet
           TPL
