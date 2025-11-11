@@ -40,7 +40,7 @@ SCORE="$3"
 ########################################
 # GPU 측(계정 B)의 리소스
 # 실제 Blender GPU AMI ID (available 상태여야 함)
-: "${AMI_ID:=ami-07b3d9cd405857493}"          # Blender GPU AMI - 상태 확인 필요!
+: "${AMI_ID:=ami-0caa0e6efe7cdcacd}"          # Blender GPU AMI - 상태 확인 필요!
 : "${INSTANCE_TYPE:=g4dn.xlarge}"
 : "${KEY_NAME:=treetment-blender-server-key-pair}"
 : "${SECURITY_GROUP_ID:=sg-0d3cdd04c8b6b09e7}"
