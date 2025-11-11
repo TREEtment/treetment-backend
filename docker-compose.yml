@@ -1,23 +1,15 @@
-# version 키는 제거(경고 제거). appnet은 미리 만들어 둔 external 네트워크를 그대로 사용.
-#   $ docker network create appnet    # 없으면 한 번만 실행
-
 networks:
   appnet:
     external: true
 
 services:
   backend:
-    # GitHub Actions에서 커밋 SHA로 태그된 이미지를 참조
-    # (도커허브 쓴다면: image: docker.io/<DOCKER_ID>/backend-backend:${GIT_SHA})
     image: ghcr.io/${GITHUB_REPOSITORY}/backend-backend:${GIT_SHA}
     container_name: backend
     restart: always
-
     ports:
       - "80:8080"
-
     environment:
-      # --- 기존에 쓰던 환경변수 그대로 유지 ---
       JASYPT_ENCRYPTOR_PASSWORD: ${JASYPT_ENCRYPTOR_PASSWORD}
       SPRING_PROFILES_ACTIVE: ${SPRING_PROFILES_ACTIVE:-prod}
       TZ: ${TZ:-Asia/Seoul}
@@ -26,21 +18,15 @@ services:
       AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-ap-northeast-2}
       INTERNAL_SECRET: ${INTERNAL_SECRET}
 
-      # --- AI 서버 주소: application-prod.yml에서 하드코딩된 값 사용 ---
+      # 🔴 여기가 핵심: 시스템 프로퍼티로 ai.* 주소를 '강제'
+      JAVA_OPTS: >-
+        -Dsun.net.inetaddr.ttl=30
+        -Dsun.net.inetaddr.negative.ttl=0
+        -Dai.image.url=http://host.docker.internal:8100
+        -Dai.text.url=http://host.docker.internal:8000
 
-      # --- DNS 캐시 안정화(간헐적 UnknownHost 완화) ---
-      JAVA_OPTS: "-Dsun.net.inetaddr.ttl=30 -Dsun.net.inetaddr.negative.ttl=0"
-
-    # 로컬 디버깅 시 host.docker.internal 해석 지원(서버에선 영향 없음)
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
     networks:
       - appnet
-
-    # 헬스체크를 쓰면 롤링 재배포 안정성 ↑ (액추에이터 열려있을 때)
-    # healthcheck:
-    #   test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
-    #   interval: 30s
-    #   timeout: 5s
-    #   retries: 3
