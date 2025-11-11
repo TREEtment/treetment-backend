@@ -127,7 +127,7 @@ jobs:
                 # --- DNS 캐시 안정화(간헐적 UnknownHost 완화) ---
                 AI_IMAGE_URL: "http://image-model-api:8000"
                 AI_TEXT_URL:  "http://text-model-api:8000"
-                JAVA_OPTS: "-Dsun.net.inetaddr.ttl=30 -Dsun.net.inetaddr.negative.ttl=0"
+                JAVA_OPTS: "-Dsun.net.inetaddr.ttl=5 -Dsun.net.inetaddr.negative.ttl=0"
 
               # 로컬 디버깅 시 host.docker.internal 해석 지원(서버에선 영향 없음)
               extra_hosts:
@@ -136,12 +136,67 @@ jobs:
               networks:
                 - appnet
 
+              depends_on:
+                - image-model-api
+                - text-model-api
+
               # 헬스체크를 쓰면 롤링 재배포 안정성 ↑ (액추에이터 열려있을 때)
               # healthcheck:
               #   test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
               #   interval: 30s
               #   timeout: 5s
               #   retries: 3
+
+            image-model-api:
+              image: python:3.11-slim
+              container_name: image-model-api
+              restart: always
+              ports:
+                - "8100:8000"
+              environment:
+                OMP_NUM_THREADS: "1"
+              working_dir: /app
+              volumes:
+                - /home/ubuntu/image-model:/app
+              command: >
+                sh -c "
+                  set -e;
+                  apt-get update && apt-get install -y --no-install-recommends 
+                    libglib2.0-0 libsm6 libxext6 libxrender1 libgl1 libgomp1 &&
+                  rm -rf /var/lib/apt/lists/* &&
+                  pip install --no-cache-dir 'numpy<2.0,>=1.24' &&
+                  pip install --no-cache-dir fastapi uvicorn[standard] pillow requests safetensors &&
+                  pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu 
+                    torch==2.2.2+cpu torchvision==0.17.2+cpu &&
+                  pip install --no-cache-dir transformers==4.40.2 &&
+                  uvicorn image_api:app --host 0.0.0.0 --port 8000 --workers 1
+                "
+              networks:
+                - appnet
+
+            text-model-api:
+              image: python:3.11-slim
+              container_name: text-model-api
+              restart: always
+              ports:
+                - "8000:8000"
+              environment:
+                OMP_NUM_THREADS: "1"
+              working_dir: /app
+              volumes:
+                - /home/ubuntu/text-model:/app
+              command: >
+                sh -c "
+                  set -e;
+                  apt-get update && apt-get install -y --no-install-recommends libgomp1 &&
+                  rm -rf /var/lib/apt/lists/* &&
+                  pip install --no-cache-dir 'numpy<2' fastapi uvicorn[standard] requests pillow &&
+                  pip install --no-cache-dir transformers==4.40.2 &&
+                  pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch==2.2.2+cpu &&
+                  uvicorn api:app --host 0.0.0.0 --port 8000 --workers 1
+                "
+              networks:
+                - appnet
           TPL
           IMAGE="ghcr.io/$(echo '${{ env.IMAGE_NAME }}' | tr '[:upper:]' '[:lower:]')"
           sed -e "s|__IMAGE__|${IMAGE}|g" -e "s|__GIT_SHA__|${{ github.sha }}|g" compose.template.yml > docker-compose.yml
