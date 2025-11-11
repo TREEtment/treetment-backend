@@ -160,16 +160,15 @@ jobs:
                 - /home/ubuntu/image-model:/app
               command: >
                 sh -c "
-                  set -e;
-                  apt-get update && apt-get install -y --no-install-recommends 
-                    libglib2.0-0 libsm6 libxext6 libxrender1 libgl1 libgomp1 &&
+                  set -e &&
+                  apt-get update &&
+                  apt-get install -y --no-install-recommends libglib2.0-0 libsm6 libxext6 libxrender1 libgl1 libgomp1 &&
                   rm -rf /var/lib/apt/lists/* &&
                   pip install --no-cache-dir 'numpy<2.0,>=1.24' &&
-                  pip install --no-cache-dir fastapi uvicorn[standard] pillow requests safetensors &&
-                  pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu 
-                    torch==2.2.2+cpu torchvision==0.17.2+cpu &&
+                  pip install --no-cache-dir fastapi 'uvicorn[standard]' pillow requests safetensors &&
+                  pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch==2.2.2+cpu torchvision==0.17.2+cpu &&
                   pip install --no-cache-dir transformers==4.40.2 &&
-                  uvicorn image_api:app --host 0.0.0.0 --port 8000 --workers 1
+                  exec uvicorn image_api:app --host 0.0.0.0 --port 8000 --workers 1
                 "
               networks:
                 - appnet
@@ -187,13 +186,14 @@ jobs:
                 - /home/ubuntu/text-model:/app
               command: >
                 sh -c "
-                  set -e;
-                  apt-get update && apt-get install -y --no-install-recommends libgomp1 &&
+                  set -e &&
+                  apt-get update &&
+                  apt-get install -y --no-install-recommends libgomp1 &&
                   rm -rf /var/lib/apt/lists/* &&
-                  pip install --no-cache-dir 'numpy<2' fastapi uvicorn[standard] requests pillow &&
+                  pip install --no-cache-dir 'numpy<2' fastapi 'uvicorn[standard]' requests pillow &&
                   pip install --no-cache-dir transformers==4.40.2 &&
                   pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch==2.2.2+cpu &&
-                  uvicorn api:app --host 0.0.0.0 --port 8000 --workers 1
+                  exec uvicorn api:app --host 0.0.0.0 --port 8000 --workers 1
                 "
               networks:
                 - appnet
