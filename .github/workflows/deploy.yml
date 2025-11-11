@@ -239,10 +239,14 @@ jobs:
             echo "JASYPT_ENCRYPTOR_PASSWORD=${{ secrets.JASYPT_ENCRYPTOR_PASSWORD }}" >> .env
             echo "INTERNAL_SECRET=${{ secrets.INTERNAL_SECRET }}" >> .env
 
-            echo "Cleanup old container..."
+            echo "Cleanup old containers (including AI servers)..."
             docker compose -f docker-compose.yml down --remove-orphans >/dev/null 2>&1 || true
             docker rm -f backend >/dev/null 2>&1 || true
+            docker rm -f image-model-api >/dev/null 2>&1 || true
+            docker rm -f text-model-api >/dev/null 2>&1 || true
             docker ps -aq --filter "name=^/backend$" | xargs -r docker rm -f >/dev/null 2>&1 || true
+            docker ps -aq --filter "name=^/image-model-api$" | xargs -r docker rm -f >/dev/null 2>&1 || true
+            docker ps -aq --filter "name=^/text-model-api$" | xargs -r docker rm -f >/dev/null 2>&1 || true
 
             echo "Validate compose..."
             docker compose -f docker-compose.yml config >/dev/null
