@@ -32,3 +32,72 @@ services:
 
     networks:
       - appnet
+
+    depends_on:
+      image-model-api:
+        condition: service_healthy
+      text-model-api:
+        condition: service_healthy
+
+  image-model-api:
+    image: python:3.11-slim
+    container_name: image-model-api
+    restart: always
+    ports:
+      - "${IMAGE_MODEL_PORT:-8100}:8000"
+    environment:
+      OMP_NUM_THREADS: "1"
+    working_dir: /app
+    volumes:
+      - ${IMAGE_MODEL_DIR:-./image-model}:/app
+    command: >
+      sh -c "
+        set -e &&
+        apt-get update &&
+        apt-get install -y --no-install-recommends libglib2.0-0 libsm6 libxext6 libxrender1 libgl1 libgomp1 curl &&
+        rm -rf /var/lib/apt/lists/* &&
+        pip install --no-cache-dir 'numpy<2.0,>=1.24' &&
+        pip install --no-cache-dir fastapi 'uvicorn[standard]' pillow requests safetensors &&
+        pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch==2.2.2+cpu torchvision==0.17.2+cpu &&
+        pip install --no-cache-dir transformers==4.40.2 &&
+        exec uvicorn image_api:app --host 0.0.0.0 --port 8000 --workers 1
+      "
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 120s
+    networks:
+      - appnet
+
+  text-model-api:
+    image: python:3.11-slim
+    container_name: text-model-api
+    restart: always
+    ports:
+      - "${TEXT_MODEL_PORT:-8200}:8000"
+    environment:
+      OMP_NUM_THREADS: "1"
+    working_dir: /app
+    volumes:
+      - ${TEXT_MODEL_DIR:-./text-model}:/app
+    command: >
+      sh -c "
+        set -e &&
+        apt-get update &&
+        apt-get install -y --no-install-recommends libgomp1 curl &&
+        rm -rf /var/lib/apt/lists/* &&
+        pip install --no-cache-dir 'numpy<2' fastapi 'uvicorn[standard]' requests pillow &&
+        pip install --no-cache-dir transformers==4.40.2 &&
+        pip install --no-cache-dir --index-url https://download.pytorch.org/whl/cpu torch==2.2.2+cpu &&
+        exec uvicorn api:app --host 0.0.0.0 --port 8000 --workers 1
+      "
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 120s
+    networks:
+      - appnet
