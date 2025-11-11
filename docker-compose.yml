@@ -17,15 +17,15 @@ services:
       AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
       AWS_DEFAULT_REGION: ${AWS_DEFAULT_REGION:-ap-northeast-2}
       INTERNAL_SECRET: ${INTERNAL_SECRET}
-      AI_IMAGE_URL: http://host.docker.internal:8100
-      AI_TEXT_URL:  http://host.docker.internal:8000
+      AI_IMAGE_URL: http://image-model-api:8000
+      AI_TEXT_URL: http://text-model-api:8000
 
       # 🔴 여기가 핵심: 시스템 프로퍼티로 ai.* 주소를 '강제'
       JAVA_OPTS: >-
         -Dsun.net.inetaddr.ttl=30
         -Dsun.net.inetaddr.negative.ttl=0
-        -Dai.image.url=http://host.docker.internal:8100
-        -Dai.text.url=http://host.docker.internal:8000
+        -Dai.image.url=http://image-model-api:8000
+        -Dai.text.url=http://text-model-api:8000
 
     extra_hosts:
       - "host.docker.internal:host-gateway"

@@ -66,10 +66,10 @@ openai:
     model: "gpt-3.5-turbo"
 
 ai:
-  text:
-    url: "http://host.docker.internal:8000"
   image:
-    url: "http://host.docker.internal:8100"
+    url: ${AI_IMAGE_URL:http://image-model-api:8000}
+  text:
+    url: ${AI_TEXT_URL:http://text-model-api:8000}
 
 blender:
   server:

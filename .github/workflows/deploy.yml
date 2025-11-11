@@ -125,8 +125,8 @@ jobs:
                 INTERNAL_SECRET: ${INTERNAL_SECRET}
 
                 # --- DNS 캐시 안정화(간헐적 UnknownHost 완화) ---
-                AI_IMAGE_URL: "http://172.17.0.1:8100"
-                AI_TEXT_URL:  "http://172.17.0.1:8000"
+                AI_IMAGE_URL: "http://image-model-api:8000"
+                AI_TEXT_URL:  "http://text-model-api:8000"
                 JAVA_OPTS: "-Dsun.net.inetaddr.ttl=30 -Dsun.net.inetaddr.negative.ttl=0"
 
               # 로컬 디버깅 시 host.docker.internal 해석 지원(서버에선 영향 없음)
