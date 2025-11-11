@@ -20,8 +20,6 @@ public class ImageRecordController {
 
     /**
      * 이미지 기반 감정 기록 생성 API
-     * 하루에 한 번만 생성이 가능하며,
-     * 중복 생성 시 409 Conflict 응답을 반환하고,
      * 성공 시 201 Created 응답과 함께 생성된 기록의 상세 정보를 반환
      */
     @PostMapping("/user/{userId}")

@@ -14,9 +14,6 @@ import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import com.treetment.backend.emotionTree.service.EmotiontreeService;
 import java.util.Map;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.util.Optional;
 @Service
 @RequiredArgsConstructor
 public class EmotionRecordService {
@@ -52,40 +49,16 @@ public class EmotionRecordService {
         String gptAnswer = gptService.getGptAdvice(requestDTO.getEmotionContent());
         System.out.println("GPT 답변: " + gptAnswer);
 
-        LocalDate today = LocalDate.now();
-        LocalDateTime startOfDay = today.atStartOfDay();
-        LocalDateTime endOfDay = today.atTime(23, 59, 59);
-
-        Optional<EmotionRecord> existingRecordOpt = emotionRecordRepository2
-                .findTopByUser_IdAndCreatedAtBetweenOrderByCreatedAtDesc(userId, startOfDay, endOfDay);
-        EmotionRecord recordToSave;
-        if (existingRecordOpt.isPresent()) {
-            recordToSave = existingRecordOpt.get();
-            System.out.println("기존 기록 업데이트 - ID: " + recordToSave.getId());
-            System.out.println("업데이트 전 - emotionContent: " + recordToSave.getEmotionContent());
-            System.out.println("업데이트 전 - gptAnswer: " + recordToSave.getGptAnswer());
-            
-            // 직접 필드 설정 (update 메서드 대신)
-            recordToSave.setEmotionTitle(requestDTO.getEmotionTitle());
-            recordToSave.setEmotionContent(originalContent);
-            recordToSave.setEmotionScore(emotionScore);
-            recordToSave.setGptAnswer(gptAnswer);
-            
-            System.out.println("업데이트 후 - emotionContent: " + recordToSave.getEmotionContent());
-            System.out.println("업데이트 후 - gptAnswer: " + recordToSave.getGptAnswer());
-        }
-        else {
-            System.out.println("새 기록 생성");
-            recordToSave = EmotionRecord.builder()
-                    .user(user)
-                    .emotionTitle(requestDTO.getEmotionTitle())
-                    .emotionContent(originalContent)
-                    .emotionScore(emotionScore)
-                    .gptAnswer(gptAnswer)
-                    .build();
-            System.out.println("생성 후 - emotionContent: " + recordToSave.getEmotionContent());
-            System.out.println("생성 후 - gptAnswer: " + recordToSave.getGptAnswer());
-        }
+        System.out.println("새 기록 생성");
+        EmotionRecord recordToSave = EmotionRecord.builder()
+                .user(user)
+                .emotionTitle(requestDTO.getEmotionTitle())
+                .emotionContent(originalContent)
+                .emotionScore(emotionScore)
+                .gptAnswer(gptAnswer)
+                .build();
+        System.out.println("생성 후 - emotionContent: " + recordToSave.getEmotionContent());
+        System.out.println("생성 후 - gptAnswer: " + recordToSave.getGptAnswer());
         
         EmotionRecord savedRecord = emotionRecordRepository2.save(recordToSave);
         entityManager.flush(); // 명시적으로 flush
@@ -145,26 +118,13 @@ public class EmotionRecordService {
         String emotionContent = "";
         String gptAnswer = "";
 
-        LocalDate today = LocalDate.now();
-        LocalDateTime startOfDay = today.atStartOfDay();
-        LocalDateTime endOfDay = today.atTime(23, 59, 59);
-
-        Optional<EmotionRecord> existingRecordOpt = emotionRecordRepository2
-                .findTopByUser_IdAndCreatedAtBetweenOrderByCreatedAtDesc(userId, startOfDay, endOfDay);
-        EmotionRecord recordToSave;
-        if (existingRecordOpt.isPresent()) {
-            recordToSave = existingRecordOpt.get();
-            recordToSave.update(emotionTitle, emotionContent, emotionScore, gptAnswer);
-        }
-        else {
-            recordToSave = EmotionRecord.builder()
-                    .user(user)
-                    .emotionTitle(emotionTitle)
-                    .emotionContent(emotionContent)
-                    .emotionScore(emotionScore)
-                    .gptAnswer(gptAnswer)
-                    .build();
-        }
+        EmotionRecord recordToSave = EmotionRecord.builder()
+                .user(user)
+                .emotionTitle(emotionTitle)
+                .emotionContent(emotionContent)
+                .emotionScore(emotionScore)
+                .gptAnswer(gptAnswer)
+                .build();
         EmotionRecord savedRecord = emotionRecordRepository2.save(recordToSave);
         
         // EmotionTree 대기 생성

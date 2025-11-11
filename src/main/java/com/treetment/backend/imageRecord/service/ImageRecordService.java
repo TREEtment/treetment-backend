@@ -17,10 +17,7 @@ import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDate;
-import java.time.LocalDateTime;
 import java.util.Map;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -53,14 +50,6 @@ public class ImageRecordService {
 
     @Transactional
     public ImageRecordDetailDTO createImageRecord(Long userId, ImageRecordCreateRequestDTO requestDTO) {
-        // 오늘 날짜의 기록이 이미 있는지 확인
-        findTodayRecord(userId).ifPresent(record -> {
-            // 기록이 이미 존재하면, 예외를 발생
-            throw new IllegalStateException(
-                    "이미 오늘 감정 기록을 작성했습니다. " +
-                            "기록은 하루에 한 번만 가능합니다.");
-        });
-
         User user = findUserById(userId); // 사용자 조회
 
         // 이미지 분석 및 점수 획득
@@ -116,13 +105,6 @@ public class ImageRecordService {
         return userRepository.findById(userId.intValue())
                 .orElseThrow(() -> new EntityNotFoundException(
                         "해당 ID의 사용자를 찾을 수 없습니다: " + userId));
-    }
-
-    private Optional<EmotionRecord> findTodayRecord(Long userId) {
-        LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
-        LocalDateTime endOfDay = LocalDate.now().atTime(23, 59, 59);
-        return imageRecordRepository.findTopByUser_IdAndCreatedAtBetweenOrderByCreatedAtDesc(
-                userId, startOfDay, endOfDay);
     }
 
     private AiAnalysisResponse analyzeImageAndGetResponse(String imageUrl) {
