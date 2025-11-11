@@ -262,18 +262,14 @@ jobs:
             docker stop backend >/dev/null 2>&1 || true
             docker rm backend >/dev/null 2>&1 || true
 
-            echo "Start AI servers if not running..."
-            docker compose -f docker-compose.yml up -d image-model-api text-model-api
-
-            echo "Wait for AI servers to be healthy..."
-            sleep 5
-
             echo "Validate compose..."
             docker compose -f docker-compose.yml config >/dev/null
 
-            echo "Pull & start backend..."
+            echo "Pull fresh backend image..."
             docker compose -f docker-compose.yml pull backend || true
-            docker compose -f docker-compose.yml up -d backend
+
+            echo "Start full stack with docker compose up -d..."
+            docker compose -f docker-compose.yml up -d --remove-orphans
 
             echo "PS:"
             docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}'
