@@ -142,6 +142,11 @@ jobs:
                 text-model-api:
                   condition: service_healthy
 
+              entrypoint: >
+                sh -c "echo 'Waiting for AI services to be fully ready...' && 
+                       sleep 10 && 
+                       exec java $$JAVA_OPTS -jar /app/app.jar"
+
               # 헬스체크를 쓰면 롤링 재배포 안정성 ↑ (액추에이터 열려있을 때)
               # healthcheck:
               #   test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
@@ -253,21 +258,22 @@ jobs:
             echo "JASYPT_ENCRYPTOR_PASSWORD=${{ secrets.JASYPT_ENCRYPTOR_PASSWORD }}" >> .env
             echo "INTERNAL_SECRET=${{ secrets.INTERNAL_SECRET }}" >> .env
 
-            echo "Cleanup old containers (including AI servers)..."
-            docker compose -f docker-compose.yml down --remove-orphans >/dev/null 2>&1 || true
-            docker rm -f backend >/dev/null 2>&1 || true
-            docker rm -f image-model-api >/dev/null 2>&1 || true
-            docker rm -f text-model-api >/dev/null 2>&1 || true
-            docker ps -aq --filter "name=^/backend$" | xargs -r docker rm -f >/dev/null 2>&1 || true
-            docker ps -aq --filter "name=^/image-model-api$" | xargs -r docker rm -f >/dev/null 2>&1 || true
-            docker ps -aq --filter "name=^/text-model-api$" | xargs -r docker rm -f >/dev/null 2>&1 || true
+            echo "Cleanup backend only (keep AI servers running)..."
+            docker stop backend >/dev/null 2>&1 || true
+            docker rm backend >/dev/null 2>&1 || true
+
+            echo "Start AI servers if not running..."
+            docker compose -f docker-compose.yml up -d image-model-api text-model-api
+
+            echo "Wait for AI servers to be healthy..."
+            sleep 5
 
             echo "Validate compose..."
             docker compose -f docker-compose.yml config >/dev/null
 
-            echo "Pull & up..."
-            docker compose -f docker-compose.yml pull || true
-            docker compose -f docker-compose.yml up -d
+            echo "Pull & start backend..."
+            docker compose -f docker-compose.yml pull backend || true
+            docker compose -f docker-compose.yml up -d backend
 
             echo "PS:"
             docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}'
