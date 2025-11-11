@@ -101,8 +101,9 @@ public class EmotionRecordService {
     public record TreeInitResult(Long treeId, Double score) {}
 
     /**
-     * 감정 기록 저장 + EmotionTree 대기 생성 후 treeId와 score 반환 (내부용)
+     * EmotionTree 대기 생성 후 treeId와 score 반환 (내부용)
      * 점수만 받아서 사용
+     * 감정 기록은 생성하지 않고 트리만 생성
      */
     @Transactional
     public TreeInitResult createRecordAndPendingTreeWithScore(Integer userId, Float emotionScore) {
@@ -113,25 +114,11 @@ public class EmotionRecordService {
             throw new IllegalArgumentException("emotionScore는 필수입니다.");
         }
         
-        // 기본값 설정 (점수만 받으므로 title, content는 기본값 사용)
-        String emotionTitle = "오늘의 감정 기록";
-        String emotionContent = "";
-        String gptAnswer = "";
-
-        EmotionRecord recordToSave = EmotionRecord.builder()
-                .user(user)
-                .emotionTitle(emotionTitle)
-                .emotionContent(emotionContent)
-                .emotionScore(emotionScore)
-                .gptAnswer(gptAnswer)
-                .build();
-        EmotionRecord savedRecord = emotionRecordRepository2.save(recordToSave);
-        
-        // EmotionTree 대기 생성
+        // 감정 기록은 생성하지 않고 트리만 생성
         com.treetment.backend.emotionTree.dto.TreeRenderResponseDTO treeRenderResponse =
-                emotiontreeService.createPendingTree(savedRecord.getUser().getId(), savedRecord.getEmotionScore());
+                emotiontreeService.createPendingTree(user.getId(), emotionScore);
 
-        return new TreeInitResult(treeRenderResponse.getTreeId(), Double.valueOf(savedRecord.getEmotionScore())) ;
+        return new TreeInitResult(treeRenderResponse.getTreeId(), Double.valueOf(emotionScore)) ;
     }
 
     private float calculateWeightedScore(Map<String, String> probabilities) {
