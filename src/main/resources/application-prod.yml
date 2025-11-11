@@ -67,9 +67,9 @@ openai:
 
 ai:
   text:
-    url: "${AI_TEXT_URL:http://host.docker.internal:8000}"
+    url: "http://host.docker.internal:8000"
   image:
-    url: "${AI_IMAGE_URL:http://host.docker.internal:8100}"
+    url: "http://host.docker.internal:8100"
 
 blender:
   server:
