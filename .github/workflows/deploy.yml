@@ -271,6 +271,11 @@ jobs:
             echo "Start full stack with docker compose up -d..."
             docker compose -f docker-compose.yml up -d --remove-orphans
 
+            echo "Ensure backend and AI containers are attached to appnet..."
+            for svc in backend image-model-api text-model-api; do
+              docker network connect appnet "$svc" >/dev/null 2>&1 || true
+            done
+
             echo "PS:"
             docker ps --format 'table {{.Names}}\t{{.Image}}\t{{.Status}}\t{{.Ports}}'
 
