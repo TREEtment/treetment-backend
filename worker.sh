@@ -20,7 +20,7 @@ export INTERNAL_SECRET
 
 # 백엔드 URL (tree.py에서 사용)
 # GPU 인스턴스에서 실행되므로 실제 백엔드의 Public IP 사용
-: "${BACKEND_URL:=http://3.34.146.140}"
+: "${BACKEND_URL:=http://52.78.124.121}"
 export BACKEND_URL
 
 ########################################
@@ -40,7 +40,7 @@ SCORE="$3"
 ########################################
 # GPU 측(계정 B)의 리소스
 # 실제 Blender GPU AMI ID (available 상태여야 함)
-: "${AMI_ID:=ami-0c8d6101f95b798bc}"          # Blender GPU AMI - 상태 확인 필요!
+: "${AMI_ID:=ami-0b8e8ee17fe977905}"          # Blender GPU AMI - 상태 확인 필요!
 : "${INSTANCE_TYPE:=g4dn.xlarge}"
 : "${KEY_NAME:=treetment-blender-server-key-pair}"
 : "${SECURITY_GROUP_ID:=sg-0d3cdd04c8b6b09e7}"
