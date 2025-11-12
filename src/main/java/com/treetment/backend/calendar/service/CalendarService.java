@@ -48,4 +48,18 @@ public class CalendarService {
 
         return new CalendarDetailDTO(records.get(0));
     }
+
+    @Transactional(readOnly = true)
+    public List<CalendarDetailDTO> findDailyRecordsByUserId(Long userId, String dateStr) {
+        LocalDate date = LocalDate.parse(dateStr, DateTimeFormatter.ofPattern("yyyy-MM-dd"));
+        LocalDateTime startDateTime = date.atStartOfDay();
+        LocalDateTime endDateTime = date.atTime(23, 59, 59);
+
+        List<EmotionRecord> records = calendarRepository
+                .findByUser_IdAndCreatedAtBetweenOrderByCreatedAtDesc(userId, startDateTime, endDateTime);
+
+        return records.stream()
+                .map(CalendarDetailDTO::new)
+                .collect(Collectors.toList());
+    }
 }

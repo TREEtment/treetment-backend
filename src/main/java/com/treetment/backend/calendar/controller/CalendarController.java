@@ -29,4 +29,17 @@ public class CalendarController {
             return ResponseEntity.badRequest().body("잘못된 날짜 형식입니다. (YYYY-MM 또는 YYYY-MM-DD)");
         }
     }
+
+    @GetMapping("/{userId}/{date}/list")
+    public ResponseEntity<?> getDailyRecordsList(
+            @PathVariable Long userId,
+            @PathVariable String date) {
+
+        if (date.length() != 10) {
+            return ResponseEntity.badRequest().body("잘못된 날짜 형식입니다. (YYYY-MM-DD)");
+        }
+
+        List<CalendarDetailDTO> records = calendarService.findDailyRecordsByUserId(userId, date);
+        return ResponseEntity.ok(records);
+    }
 }
