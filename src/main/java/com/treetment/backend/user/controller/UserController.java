@@ -53,7 +53,7 @@ public class UserController {
     }
 
     @GetMapping("/nickname/check")
-    @Operation(summary = "닉네임 중복 확인", description = "닉네임의 사용 가능 여부를 확인합니다.")
+    @Operation(summary = "닉네임 중복 확인", description = "닉네임의 사용 가능 여부를 확인합니다.", security = {})
     public ResponseEntity<ApiResponse<Boolean>> checkNickname(@RequestParam String nickname) {
         boolean available = userService.checkNicknameAvailability(nickname);
         return ResponseEntity.ok(ApiResponse.success(
